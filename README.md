@@ -6,13 +6,13 @@
 
 Have You Seen It? is a Django-based web application designed to help users quickly build a library of the movies they have seen. It features a modern, mobile-friendly swipe interface for rating movies, powered by data from The Movie Database (TMDb).
 
-The core philosophy is to make movie logging fast and enjoyable by presenting users with one movie at a time. The movie selection is not purely random; it uses a weighted algorithm biased towards more popular and well-known films to improve the user experience.
+The core philosophy is to make movie logging fast and enjoyable by presenting users with a random selection of movies, one at a time.
 
 ## Core Features (v0.01)
 
 -   **User Accounts:** Simple and secure signup, login, and logout.
 -   **Swipe to Rate:** Quickly rate movies as "Seen" or "Not Seen" with a fun, intuitive swipe interface.
--   **Smart Suggestions:** The movie queue is intelligently weighted to show you more popular and recognizable films, not just obscure ones.
+-   **Random Movie Suggestions:** Discover and rate movies from a randomized queue.
 -   **Live Seen Counter:** Watch your "Movies Seen" count animate and update in real-time as you rate.
 -   **Powerful Filtering:** Filter the movie queue by Genre or search for a specific Person (e.g., actor, director).
 -   **Profile Dashboard:** View your total movie count and account details on a personal dashboard.
