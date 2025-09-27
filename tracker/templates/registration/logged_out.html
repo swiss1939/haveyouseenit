@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<meta http-equiv="refresh" content="5; url=/" />
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="card shadow-lg p-4 rounded-3">
+                <h2 class="card-title text-primary mb-4">You have been logged out!</h2>
+                
+                <p class="mb-4">
+                    Thank you for using HaveYouSeenIt. Your session has been safely closed.
+                </p>
+                
+                <p class="text-muted small">
+                    Redirecting you to the home page in 5 seconds...
+                </p>
+                
+                <p>
+                    <a href="{% url 'login' %}" class="btn btn-success btn-lg">Click here to log in immediately</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

@@ -1,0 +1,28 @@
+# haveyouseenit/docker-compose.yml
+
+services:
+  web:
+    build: .
+    container_name: haveyouseenit_web
+    command: python manage.py runserver 0.0.0.0:9000
+    volumes:
+      - .:/app
+    ports:
+      - "9000:9000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    container_name: haveyouseenit_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env
+    ports:
+      - "5433:5432"
+
+volumes:
+  postgres_data:

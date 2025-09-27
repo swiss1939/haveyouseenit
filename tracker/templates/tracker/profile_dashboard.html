@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card shadow-lg p-4 rounded-3">
+                <h2 class="card-title text-center mb-4 fw-bold text-primary">
+                    {{ user.first_name }}'s Viewing Summary
+                </h2>
+                
+                <div class="row justify-content-center mb-4">
+                    <div class="col-md-6 mb-3">
+                        <div class="p-3 rounded-3 shadow-lg" style="background-color: #f0f0f0;">
+                            <h5 class="text-uppercase text-muted small text-center fw-bolder" style="font-size: 1.5rem;">TOTAL MOVIES SEEN</h5>
+                            
+                            <p class="text-center text-success" style="font-size: 6rem; font-weight: 900; line-height: 1;">
+                                {{ total_seen_movies }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <h4 class="mt-4 mb-3 border-bottom pb-2">Account Details</h4>
+                <div class="row small text-muted">
+                    <div class="col-sm-6 mb-2"><strong>Email:</strong> {{ user.email }}</div>
+                    <div class="col-sm-6 mb-2"><strong>Date of Birth:</strong> {{ profile.date_of_birth }}</div>
+                    <div class="col-sm-6 mb-2"><strong>Joined:</strong> {{ profile.join_date|date:"F j, Y" }}</div>
+                    <div class="col-sm-6 mb-2"><strong>Last Activity:</strong> {{ profile.last_activity|timesince }} ago</div>
+                </div>
+
+                <hr class="mt-4">
+                
+                <h3 class="mt-4 text-center text-secondary">Viewing Insights (In Development)</h3>
+                <p class="text-center text-muted">We'll display your Top Genres, Actors, and Decades here soon!</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

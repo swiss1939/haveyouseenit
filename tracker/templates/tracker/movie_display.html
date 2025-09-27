@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    
+    {% if no_movies_left %}
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <div class="card shadow-lg p-5 rounded-3">
+                <h2 class="card-title text-primary mb-4">No Movies Left!</h2>
+                <p class="lead">You've rated every movie matching the current filter. Try selecting a different genre or clearing the filter.</p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="d-flex justify-content-center position-relative" style="max-width: 1000px; margin: 0 auto;">
+        
+        <div id="swipe-cue-left" class="position-absolute d-flex align-items-center justify-content-center rounded-3 shadow-sm"
+             style="width: 20vw; min-width: 100px; max-width: 250px; top: 0; left: 0; transform: translateX(calc(-100% + 5px)); height: 100%; z-index: -1; background: linear-gradient(to right, rgba(248, 249, 250, 0) 0%, rgba(200, 40, 40, 0.7) 100%); color: #1a1a1a; font-size: 2em; font-weight: bold; text-shadow: 0 0 5px rgba(0, 0, 0, 0.5); opacity: 0; transition: opacity 0.3s ease; pointer-events: none;">
+            NO
+        </div>
+
+        <div id="swipe-cue-right" class="position-absolute d-flex align-items-center justify-content-center rounded-3 shadow-sm"
+             style="width: 20vw; min-width: 100px; max-width: 250px; top: 0; right: 0; transform: translateX(calc(100% - 5px)); height: 100%; z-index: -1; background: linear-gradient(to left, rgba(248, 249, 250, 0) 0%, rgba(40, 200, 40, 0.7) 100%); color: #1a1a1a; font-size: 2em; font-weight: bold; text-shadow: 0 0 5px rgba(0, 0, 0, 0.5); opacity: 0; transition: opacity 0.3s ease; pointer-events: none;">
+            YES
+        </div>
+        
+        <div id="movie-card" class="row shadow-lg bg-white p-4" style="max-width: 800px; border-radius: 20px; position: relative;">
+            
+            <div class="col-md-4 mb-3 mb-md-0">
+                {% if movie.poster_url %}
+                    <img src="{{ movie.poster_url }}" alt="Poster for {{ movie.title }}" class="img-fluid rounded shadow-sm">
+                {% else %}
+                    <div class="bg-secondary text-white text-center rounded d-flex align-items-center justify-content-center" style="height: 380px;">
+                        [No Poster Available]
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-8 d-flex flex-column justify-content-start">
+                <div>
+                    <h2 class="fw-bold text-primary">{{ movie.title }}</h2>
+                    <h4 class="text-muted mb-3">({{ movie.release_year }})</h4>
+                    
+                    <p class="small text-uppercase fw-semibold mb-1">Genres:</p>
+                    <p class="mb-3">
+                        {% for genre in movie.genre.all %}
+                            <span class="badge bg-info text-dark me-1">{{ genre.name }}</span>
+                        {% endfor %}
+                    </p>
+                    
+                    <p class="mt-3">{{ movie.plot_summary }}</p>
+                </div>
+            </div>
+            
+            <form id="swipe-form" method="post" action="{% url 'next_movie' %}" class="d-none">
+                {% csrf_token %}
+                <input type="hidden" name="movie_id" value="{{ movie.id }}">
+                <input type="hidden" id="has-seen-input" name="has_seen" value="">
+                <input type="hidden" name="genre" value="{{ active_genre_id|default:'' }}">
+                <input type="hidden" name="person_query" value="{{ active_person_query|default:'' }}">
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const card = document.getElementById('movie-card');
+    if (!card) return; // Exit if there's no movie card on the page
+
+    const form = document.getElementById('swipe-form');
+    const hasSeenInput = document.getElementById('has-seen-input');
+    
+    const cueLeft = document.getElementById('swipe-cue-left');
+    const cueRight = document.getElementById('swipe-cue-right');
+    
+    const velocityThreshold = 0.5;
+    const dragThreshold = 150;
+    const swipeAnimationDuration = 400;
+    const offScreenDistance = 1500;
+    
+    function resetCardStyles() {
+        card.style.transform = '';
+        card.style.opacity = 1;
+        card.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+    }
+
+    function hideCues() {
+        cueLeft.style.opacity = 0;
+        cueRight.style.opacity = 0;
+    }
+    
+    card.addEventListener('mouseenter', function() { cueLeft.style.opacity = 0.5; cueRight.style.opacity = 0.5; });
+    card.addEventListener('mouseleave', hideCues);
+
+    const hammer = new Hammer(card);
+    hammer.get('pan').set({ direction: Hammer.DIRECTION_HORIZONTAL, threshold: 10 });
+    hammer.get('swipe').set({ direction: Hammer.DIRECTION_HORIZONTAL, threshold: 50 });
+    
+    resetCardStyles();
+
+    hammer.on('pan', function(e) {
+        card.style.transform = `translateX(${e.deltaX}px) rotate(${e.deltaX / 50}deg)`;
+        card.style.transition = 'none';
+        
+        const maxDrag = 150;
+        const opacity = Math.min(Math.abs(e.deltaX) / maxDrag, 1);
+        
+        if (e.deltaX < 0) {
+            cueLeft.style.opacity = opacity;
+            cueRight.style.opacity = 0;
+        } else {
+            cueRight.style.opacity = opacity;
+            cueLeft.style.opacity = 0;
+        }
+    });
+
+    hammer.on('panend', function(e) {
+        const deltaX = e.deltaX;
+        const absoluteDeltaX = Math.abs(deltaX);
+
+        if (absoluteDeltaX > dragThreshold) {
+            card.style.transition = `transform ${swipeAnimationDuration}ms ease-out, opacity ${swipeAnimationDuration}ms ease-out`;
+            
+            if (deltaX > 0) {
+                card.style.transform = `translateX(${offScreenDistance}px) rotate(30deg)`;
+                submitSwipe(true, swipeAnimationDuration);
+            } else {
+                card.style.transform = `translateX(-${offScreenDistance}px) rotate(-30deg)`;
+                submitSwipe(false, swipeAnimationDuration);
+            }
+            card.style.opacity = 0;
+        } else if (Math.abs(e.velocityX) < velocityThreshold) {
+            resetCardStyles();
+            hideCues();
+        }
+    });
+
+    hammer.on('swipeleft', function() {
+        card.style.transition = `transform ${swipeAnimationDuration}ms ease-out, opacity ${swipeAnimationDuration}ms ease-out`;
+        card.style.transform = `translateX(-${offScreenDistance}px) rotate(-30deg)`;
+        card.style.opacity = 0;
+        submitSwipe(false, swipeAnimationDuration);
+    });
+
+    hammer.on('swiperight', function() {
+        card.style.transition = `transform ${swipeAnimationDuration}ms ease-out, opacity ${swipeAnimationDuration}ms ease-out`;
+        card.style.transform = `translateX(${offScreenDistance}px) rotate(30deg)`;
+        card.style.opacity = 0;
+        submitSwipe(true, swipeAnimationDuration);
+    });
+
+    function animateCounter() {
+        const wrapper = document.getElementById('seen-counter-value-wrapper');
+        const currentValueSpan = document.getElementById('seen-counter-value');
+        if (!wrapper || !currentValueSpan) return;
+
+        const currentCount = parseInt(currentValueSpan.textContent, 10);
+        const newCount = currentCount + 1;
+
+        const newValueSpan = document.createElement('span');
+        newValueSpan.textContent = newCount;
+        newValueSpan.className = currentValueSpan.className;
+        newValueSpan.style.cssText = currentValueSpan.style.cssText;
+        newValueSpan.style.transform = 'translateY(-100%)';
+        newValueSpan.style.opacity = '0';
+        wrapper.appendChild(newValueSpan);
+
+        void newValueSpan.offsetHeight;
+
+        currentValueSpan.style.transform = 'translateY(100%)';
+        currentValueSpan.style.opacity = '0';
+        newValueSpan.style.transform = 'translateY(0)';
+        newValueSpan.style.opacity = '1';
+
+        setTimeout(() => {
+            wrapper.removeChild(currentValueSpan);
+            newValueSpan.id = 'seen-counter-value';
+        }, 450);
+    }
+
+    function submitSwipe(hasSeen, animationDuration) {
+        if (form.submitted) return;
+        form.submitted = true;
+
+        hasSeenInput.value = hasSeen ? 'True' : 'False';
+
+        if (hasSeen) {
+            animateCounter();
+        }
+        
+        setTimeout(() => {
+            form.submit();
+        }, animationDuration + 50);
+    }
+});
+</script>
+{% endblock content %}

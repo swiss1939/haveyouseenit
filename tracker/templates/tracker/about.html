@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card shadow-lg p-5 rounded-3">
+                
+                <h2 class="card-title text-center mb-4 fw-bold text-dark text-uppercase">
+                    ABOUT HAVEYOUSEENIT & DATA CREDITS
+                </h2>
+
+                <p class="lead text-center text-secondary mb-4" style="font-size: 1.25rem;">
+                    The core goal of this application is simple: to help you keep track of every movie you've ever watched. We provide a clean, modern interface focused entirely on quick, efficient rating and summary.
+                </p>
+
+                <hr class="my-5">
+
+                <div class="text-center mt-4">
+                    <h4 class="fw-bold mb-3">Movie Data Provided By:</h4>
+                    
+                    <a href="https://www.themoviedb.org" target="_blank" class="d-inline-block mb-3">
+                        <img 
+                            src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg" 
+                            alt="The Movie Database (TMDb) Logo" 
+                            style="height: 60px;"
+                        >
+                    </a>
+                    
+                    <p class="text-muted small fst-italic mt-3">
+                        This product uses the TMDb API but is **not endorsed or certified by TMDb.**
+                    </p>
+                </div>
+
+                <hr class="my-5">
+
+                <div class="text-center mt-4">
+                    <h4 class="fw-bold mb-4">Powered By</h4>
+                    
+                    <div class="d-flex justify-content-center flex-wrap align-items-center py-3">
+                        
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg" alt="Python Logo" style="height: 50px; margin: 0 20px;">
+                        
+                        <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/django/django-plain.svg" alt="Django Logo" style="height: 50px; margin: 0 20px;">
+                        
+                        <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/bootstrap/bootstrap-original.svg" alt="Bootstrap Logo" style="height: 50px; margin: 0 20px;">
+                        
+                        <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg" alt="PostgreSQL Logo" style="height: 50px; margin: 0 20px;">
+
+                        <span class="fw-bold text-dark" style="font-size: 1.5rem; height: 50px; line-height: 50px; margin: 0 20px;">
+                            Hammer.js
+                        </span>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

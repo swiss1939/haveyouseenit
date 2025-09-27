@@ -1,0 +1,7 @@
+# haveyouseenit/requirements.txt
+
+Django~=5.0
+psycopg2-binary # PostgreSQL adapter
+requests
+tqdm
+django-jazzmin
