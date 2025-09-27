@@ -35,6 +35,8 @@ venv.bak/
 # CRITICAL: Ignore the local development database.
 db.sqlite3
 db.sqlite3-journal
+prod_seed.json
+export_prod_seed.py
 
 # Log files
 *.log
