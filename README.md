@@ -1,25 +1,21 @@
-# Have You Seen It? - Movie Tracker (Alpha v1.0)
+# Have You Seen It? - Movie Tracker (Alpha v0.01)
 
-![Have You Seen It? Interface](https://i.imgur.com/gO9qB1m.gif)
 *A simple, fast, and fun way to track the movies you've watched.*
 
 ## Overview
 
-Have You Seen It? is a Django-based web application designed to help users quickly build a library of the movies they have seen. It features a modern, mobile-friendly swipe interface (similar to Tinder) for rating movies, powered by data from The Movie Database (TMDb).
+Have You Seen It? is a Django-based web application designed to help users quickly build a library of the movies they have seen. It features a modern, mobile-friendly swipe interface for rating movies, powered by data from The Movie Database (TMDb).
 
 The core philosophy is to make movie logging fast and enjoyable by presenting users with one movie at a time. The movie selection is not purely random; it uses a weighted algorithm biased towards more popular and well-known films to improve the user experience.
 
-## Core Features (v1.0)
+## Core Features (v0.01)
 
--   **User Authentication:** Secure user signup, login, and logout functionality.
--   **Swipe Interface:** Rate movies with a simple "Yes" (seen) or "No" (not seen) swipe, powered by Hammer.js.
--   **Weighted Randomization:** The movie suggestion engine is weighted by box office revenue, ensuring users are more likely to see popular, recognizable films.
--   **Live "Movies Seen" Counter:** A dynamic counter in the header animates and updates in real-time with every "seen" swipe.
--   **Persistent Filtering:** Users can filter the movie queue by **Genre** and by a text search for **Actors, Directors, Producers, or Cinematographers**. Filters remain active between swipes.
--   **User Profile Dashboard:** A simple page that displays the user's total number of seen movies and other account details.
--   **Custom Django Admin:** A highly customized admin panel for easy data browsing, including performance optimizations for models with many relationships.
--   **Dockerized Environment:** The entire application is containerized with Docker and Docker Compose for easy and reproducible setup.
--   **Robust Data Ingestion:** Includes management commands to populate the database with movie data from the TMDb API, including backfilling of detailed stats and credits.
+-   **User Accounts:** Simple and secure signup, login, and logout.
+-   **Swipe to Rate:** Quickly rate movies as "Seen" or "Not Seen" with a fun, intuitive swipe interface.
+-   **Smart Suggestions:** The movie queue is intelligently weighted to show you more popular and recognizable films, not just obscure ones.
+-   **Live Seen Counter:** Watch your "Movies Seen" count animate and update in real-time as you rate.
+-   **Powerful Filtering:** Filter the movie queue by Genre or search for a specific Person (e.g., actor, director).
+-   **Profile Dashboard:** View your total movie count and account details on a personal dashboard.
 
 ## Technology Stack
 
@@ -39,7 +35,7 @@ To run this project locally, you will need Docker and Docker Compose installed.
     ```
 
 2.  **Configure Environment Variables:**
-    Rename the `.env.example` file to `.env` (or create a new `.env` file) and add your TMDB API key:
+    Create a `.env` file in the root directory and add your TMDB API key:
     ```
     # haveyouseenit/.env
     TMDB_API_KEY=your_actual_tmdb_api_key_here
