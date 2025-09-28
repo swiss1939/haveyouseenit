@@ -5,6 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>HaveYouSeenIt</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        #mobile-menu-container {
+            position: relative;
+            overflow: hidden;
+            transition: height 0.3s ease-in-out;
+        }
+        .mobile-menu-page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            transition: transform 0.3s ease-in-out;
+        }
+        .page-center { transform: translateX(0); }
+        .page-left { transform: translateX(-100%); }
+        .page-right { transform: translateX(100%); }
+    </style>
 </head>
 <body class="bg-light">
     
@@ -26,14 +45,10 @@
                 <ul class="navbar-nav me-auto"></ul>
 
                 {% if user.is_authenticated and page_context == 'rating' %}
-                <form method="get" action="{% url 'next_movie' %}" class="d-none d-lg-flex w-100 justify-content-center" style="max-width: 600px;">
+                <form id="desktop-filter-form" method="get" action="{% url 'next_movie' %}" class="d-none d-lg-flex w-100 justify-content-center" style="max-width: 600px;">
                     <select name="genre" class="form-select form-select-sm me-2" style="max-width: 170px;">
                         <option value="">All Genres</option>
-                        {% for genre in all_genres %}
-                            <option value="{{ genre.id }}" {% if genre.id == active_genre_id %}selected{% endif %}>
-                                {{ genre.name }}
-                            </option>
-                        {% endfor %}
+                        {% for genre in all_genres %}<option value="{{ genre.id }}" {% if genre.id == active_genre_id %}selected{% endif %}>{{ genre.name }}</option>{% endfor %}
                     </select>
                     <input class="form-control form-control-sm me-2" type="search" name="person_query" placeholder="Search by Person..." value="{{ active_person_query|default:'' }}">
                     <button class="btn btn-sm btn-outline-success me-2" type="submit">Filter</button>
@@ -41,16 +56,12 @@
                 </form>
                 {% endif %}
 
-                <ul class="navbar-nav ms-auto">
-                    {% if user.is_authenticated %}
-                        
-                        <!-- === THIS IS THE CORRECTED SECTION === -->
-
-                        <!-- 1. DESKTOP LAYOUT (Visible on large screens and up) -->
-                        <li class="nav-item d-none d-lg-flex align-items-center">
-                            {% if page_context == 'rating' %}
+                {% if user.is_authenticated %}
+                    <!-- 1. DESKTOP USER MENU (Untouched and correct) -->
+                    <ul class="navbar-nav ms-auto d-none d-lg-flex align-items-center flex-row">
+                        {% if page_context == 'rating' %}
+                            <li class="nav-item d-flex align-items-center">
                                 <span class="text-white fw-bold me-3 text-nowrap">MOVIES SEEN</span>
-                                <!-- FIX: Use padding and flexbox to allow the box to grow, matching the button height. -->
                                 <div class="bg-light rounded-3 shadow-sm d-flex align-items-center justify-content-center" style="height: 38px; padding: 0 12px;">
                                     <div id="seen-counter-value-wrapper" style="position: relative; overflow: hidden;">
                                         <span id="seen-counter-value" class="text-success" style="font-size: 1.75rem; font-weight: 900; line-height: 1; transition: transform 0.4s ease-out, opacity 0.4s ease-out;">
@@ -58,39 +69,72 @@
                                         </span>
                                     </div>
                                 </div>
-                            {% endif %}
-                            <div class="ms-3">
-                                <a class="btn btn-outline-light text-nowrap" href="{% url 'profile_dashboard' %}">My Profile</a>
-                                <form action="{% url 'logout' %}" method="post" class="d-inline-block ms-2">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-danger text-nowrap">Log Out</button>
-                                </form>
-                            </div>
+                            </li>
+                        {% endif %}
+                        <li class="nav-item ms-3">
+                            <a class="btn btn-outline-light text-nowrap" href="{% url 'profile_dashboard' %}">My Profile</a>
                         </li>
+                        <li class="nav-item ms-2">
+                            <form action="{% url 'logout' %}" method="post" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger text-nowrap">Log Out</button>
+                            </form>
+                        </li>
+                    </ul>
 
-                        <!-- 2. MOBILE LAYOUT (Visible on screens smaller than large) -->
-                        <li class="nav-item d-lg-none d-flex justify-content-between align-items-center w-100 mt-2">
-                             <span class="nav-link text-white fw-bold p-0">
-                                Hello, {% if user.first_name %}{{ user.first_name|capfirst }}{% else %}{{ user.username }}{% endif %}!
-                             </span>
-                             <div>
-                                <a class="btn btn-outline-light btn-sm text-nowrap" href="{% url 'profile_dashboard' %}">My Profile</a>
-                                <form action="{% url 'logout' %}" method="post" class="d-inline-block ms-2">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-danger btn-sm text-nowrap">Log Out</button>
-                                </form>
-                            </div>
-                        </li>
+                    <!-- 2. MOBILE USER MENU (New, corrected multi-page wizard) -->
+                    <div id="mobile-menu-container" class="d-lg-none w-100 mt-2">
                         
-                    {% else %}
-                        <li class="nav-item">
-                            <a class="btn btn-outline-light me-2" href="{% url 'login' %}">Log In</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="btn btn-success" href="{% url 'signup' %}">Sign Up</a>
-                        </li>
-                    {% endif %}
-                </ul>
+                        <!-- Page 1 is now separate and does not conflict -->
+                        <div id="mobile-page-1" class="mobile-menu-page page-center">
+                            <div class="d-flex justify-content-between align-items-center w-100">
+                                <span class="nav-link text-white fw-bold p-0">Hello, {% if user.first_name %}{{ user.first_name|capfirst }}{% else %}{{ user.username }}{% endif %}!</span>
+                                <div>
+                                   <a class="btn btn-outline-light btn-sm text-nowrap" href="{% url 'profile_dashboard' %}">My Profile</a>
+                                   <form action="{% url 'logout' %}" method="post" class="d-inline-block ms-2">{% csrf_token %}<button type="submit" class="btn btn-danger btn-sm text-nowrap">Log Out</button></form>
+                                   <button data-target="2" type="button" class="btn btn-outline-secondary btn-sm ms-2 nav-btn" style="width: 32px;"><i class="bi bi-chevron-right"></i></button>
+                               </div>
+                           </div>
+                        </div>
+
+                        <!-- The Form now ONLY wraps the filter pages -->
+                        <form id="mobile-filter-form" method="get" action="{% url 'next_movie' %}">
+                            <!-- PAGE 2: Genre -->
+                            <div id="mobile-page-2" class="mobile-menu-page page-right">
+                                <div class="d-flex align-items-center w-100">
+                                    <button data-target="1" type="button" class="btn btn-outline-secondary btn-sm me-2 nav-btn" style="width: 32px;"><i class="bi bi-chevron-left"></i></button>
+                                    <select name="genre" class="form-select form-select-sm">
+                                        <option value="">All Genres</option>
+                                        {% for genre in all_genres %}<option value="{{ genre.id }}" {% if genre.id == active_genre_id %}selected{% endif %}>{{ genre.name }}</option>{% endfor %}
+                                    </select>
+                                    <button data-target="3" type="button" class="btn btn-outline-secondary btn-sm ms-2 nav-btn" style="width: 32px;"><i class="bi bi-chevron-right"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- PAGE 3: Person Search -->
+                            <div id="mobile-page-3" class="mobile-menu-page page-right">
+                                <div class="d-flex align-items-center w-100">
+                                    <button data-target="2" type="button" class="btn btn-outline-secondary btn-sm me-2 nav-btn" style="width: 32px;"><i class="bi bi-chevron-left"></i></button>
+                                    <input class="form-control form-control-sm" type="search" name="person_query" placeholder="Search by Person..." value="{{ active_person_query|default:'' }}">
+                                    <button data-target="4" type="button" class="btn btn-outline-secondary btn-sm ms-2 nav-btn" style="width: 32px;"><i class="bi bi-chevron-right"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- PAGE 4: Submit/Clear -->
+                            <div id="mobile-page-4" class="mobile-menu-page page-right">
+                                <div class="d-flex align-items-center w-100">
+                                    <button data-target="3" type="button" class="btn btn-outline-secondary btn-sm nav-btn" style="width: 32px;"><i class="bi bi-chevron-left"></i></button>
+                                    <div class="d-flex w-100 ms-2">
+                                        <button type="submit" class="btn btn-success btn-sm w-50 me-1">Apply</button>
+                                        <a href="{% url 'next_movie' %}" class="btn btn-danger btn-sm w-50 ms-1">Clear</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                {% else %}
+                    <!-- Login/Signup buttons go here -->
+                {% endif %}
             </div>
         </div>
     </nav>
@@ -101,13 +145,56 @@
     </main>
 
     <footer class="text-center py-3 mt-auto">
-        <small class="text-muted">
-            © {% now "Y" %} HaveYouSeenIt | 
-            <a href="{% url 'about' %}" class="text-secondary text-decoration-none">Credits & Attribution</a>
-        </small>
+        <small class="text-muted">© {% now "Y" %} HaveYouSeenIt | <a href="{% url 'about' %}" class="text-secondary text-decoration-none">Credits & Attribution</a></small>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const mobileMenuContainer = document.getElementById('mobile-menu-container');
+        if (!mobileMenuContainer) return;
+
+        const pages = document.querySelectorAll('.mobile-menu-page');
+        const navButtons = document.querySelectorAll('.nav-btn');
+        const navbar = document.querySelector('#navbarNav');
+
+        function setContainerHeight() {
+            const activePage = document.querySelector('.mobile-menu-page.page-center');
+            if (activePage) {
+                mobileMenuContainer.style.height = `${activePage.offsetHeight}px`;
+            }
+        }
+        
+        setContainerHeight();
+        window.addEventListener('resize', setContainerHeight);
+        navbar.addEventListener('shown.bs.collapse', setContainerHeight);
+
+        navButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const currentPage = document.querySelector('.mobile-menu-page.page-center');
+                const targetPage = document.getElementById(`mobile-page-${button.dataset.target}`);
+                
+                if (!currentPage || !targetPage) return;
+                
+                pages.forEach(p => {
+                    const pageNum = parseInt(p.id.split('-')[2]);
+                    const targetPageNum = parseInt(button.dataset.target);
+                    p.classList.remove('page-center', 'page-left', 'page-right');
+
+                    if (pageNum < targetPageNum) {
+                        p.classList.add('page-left');
+                    } else if (pageNum > targetPageNum) {
+                        p.classList.add('page-right');
+                    } else {
+                        p.classList.add('page-center');
+                    }
+                });
+                setContainerHeight();
+            });
+        });
+    });
+    </script>
 </body>
 </html>
