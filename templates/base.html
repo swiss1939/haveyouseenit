@@ -10,11 +10,19 @@
     
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="{% url 'next_movie' %}">HAVE YOU SEEN IT?</a>
+            
+            <a class="navbar-brand fw-bold d-none d-lg-block" href="{% url 'next_movie' %}">HAVE YOU SEEN IT?</a>
+            <div class="navbar-brand fw-bold d-lg-none">
+                <span class="text-white text-nowrap">MOVIES SEEN </span>
+                <span id="seen-counter-value-mobile" class="text-success">{{ total_seen_movies }}</span>
+            </div>
+            
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
+            
             <div class="collapse navbar-collapse" id="navbarNav">
+                
                 <ul class="navbar-nav me-auto"></ul>
 
                 {% if user.is_authenticated and page_context == 'rating' %}
@@ -33,40 +41,54 @@
                 </form>
                 {% endif %}
 
-                <ul class="navbar-nav ms-auto d-flex align-items-center flex-row">
+                <ul class="navbar-nav ms-auto">
                     {% if user.is_authenticated %}
-                        {% if page_context == 'rating' %}
-                            <li class="nav-item d-flex align-items-center">
+                        
+                        <!-- === THIS IS THE CORRECTED SECTION === -->
+
+                        <!-- 1. DESKTOP LAYOUT (Visible on large screens and up) -->
+                        <li class="nav-item d-none d-lg-flex align-items-center">
+                            {% if page_context == 'rating' %}
                                 <span class="text-white fw-bold me-3 text-nowrap">MOVIES SEEN</span>
-                                
-                                <!-- === THIS IS THE CORRECTED SECTION === -->
+                                <!-- FIX: Use padding and flexbox to allow the box to grow, matching the button height. -->
                                 <div class="bg-light rounded-3 shadow-sm d-flex align-items-center justify-content-center" style="height: 38px; padding: 0 12px;">
-                                    <div id="seen-counter-value-wrapper" style="display: grid; place-items: center; overflow: hidden;">
-                                        <span id="seen-counter-value" class="text-success" style="font-size: 1.75rem; font-weight: 900; line-height: 1; grid-area: 1 / 1; transition: transform 0.4s ease-out, opacity 0.4s ease-out;">
+                                    <div id="seen-counter-value-wrapper" style="position: relative; overflow: hidden;">
+                                        <span id="seen-counter-value" class="text-success" style="font-size: 1.75rem; font-weight: 900; line-height: 1; transition: transform 0.4s ease-out, opacity 0.4s ease-out;">
                                             {{ total_seen_movies }}
                                         </span>
                                     </div>
                                 </div>
-                            </li>
-                        {% else %}
-                            <li class="nav-item">
-                                <span class="navbar-text me-3 text-white fw-bold">
-                                    Hello, 
-                                    {% if user.first_name %}{{ user.first_name|capfirst }}{% else %}{{ user.username }}{% endif %}!
-                                </span>
-                            </li>
-                        {% endif %}
-                        <li class="nav-item ms-3">
-                            <a class="btn btn-outline-light me-2 text-nowrap" href="{% url 'profile_dashboard' %}">My Profile</a>
+                            {% endif %}
+                            <div class="ms-3">
+                                <a class="btn btn-outline-light text-nowrap" href="{% url 'profile_dashboard' %}">My Profile</a>
+                                <form action="{% url 'logout' %}" method="post" class="d-inline-block ms-2">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger text-nowrap">Log Out</button>
+                                </form>
+                            </div>
+                        </li>
+
+                        <!-- 2. MOBILE LAYOUT (Visible on screens smaller than large) -->
+                        <li class="nav-item d-lg-none d-flex justify-content-between align-items-center w-100 mt-2">
+                             <span class="nav-link text-white fw-bold p-0">
+                                Hello, {% if user.first_name %}{{ user.first_name|capfirst }}{% else %}{{ user.username }}{% endif %}!
+                             </span>
+                             <div>
+                                <a class="btn btn-outline-light btn-sm text-nowrap" href="{% url 'profile_dashboard' %}">My Profile</a>
+                                <form action="{% url 'logout' %}" method="post" class="d-inline-block ms-2">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm text-nowrap">Log Out</button>
+                                </form>
+                            </div>
+                        </li>
+                        
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="btn btn-outline-light me-2" href="{% url 'login' %}">Log In</a>
                         </li>
                         <li class="nav-item">
-                            <form action="{% url 'logout' %}" method="post" style="display: inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-danger text-nowrap">Log Out</button>
-                            </form>
+                            <a class="btn btn-success" href="{% url 'signup' %}">Sign Up</a>
                         </li>
-                    {% else %}
-                        <!-- Login/Signup buttons go here -->
                     {% endif %}
                 </ul>
             </div>

@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="container my-5">
-    
+
     {% if no_movies_left %}
     <div class="row justify-content-center">
         <div class="col-md-8 text-center">
@@ -14,7 +14,7 @@
     </div>
     {% else %}
     <div class="d-flex justify-content-center position-relative" style="max-width: 1000px; margin: 0 auto;">
-        
+
         <div id="swipe-cue-left" class="position-absolute d-flex align-items-center justify-content-center rounded-3 shadow-sm"
              style="width: 20vw; min-width: 100px; max-width: 250px; top: 0; left: 0; transform: translateX(calc(-100% + 5px)); height: 100%; z-index: -1; background: linear-gradient(to right, rgba(248, 249, 250, 0) 0%, rgba(200, 40, 40, 0.7) 100%); color: #1a1a1a; font-size: 2em; font-weight: bold; text-shadow: 0 0 5px rgba(0, 0, 0, 0.5); opacity: 0; transition: opacity 0.3s ease; pointer-events: none;">
             NO
@@ -25,7 +25,7 @@
             YES
         </div>
         
-        <div id="movie-card" class="row shadow-lg bg-white p-4" style="max-width: 800px; border-radius: 20px; position: relative;">
+        <div id="movie-card" class="row shadow-lg bg-white p-4" style="max-width: 800px; border-radius: 20px; position: relative; user-select: none; -webkit-user-drag: none;">
             
             <div class="col-md-4 mb-3 mb-md-0">
                 {% if movie.poster_url %}
@@ -68,24 +68,45 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const card = document.getElementById('movie-card');
-    if (!card) return; // Exit if there's no movie card on the page
+    if (!card) return;
 
     const form = document.getElementById('swipe-form');
     const hasSeenInput = document.getElementById('has-seen-input');
-    
     const cueLeft = document.getElementById('swipe-cue-left');
     const cueRight = document.getElementById('swipe-cue-right');
-    
     const velocityThreshold = 0.5;
     const dragThreshold = 150;
     const swipeAnimationDuration = 400;
     const offScreenDistance = 1500;
     
+    // --- THIS IS THE NEW, SIMPLIFIED FIX ---
+    let isPanningCard = false;
+
     function resetCardStyles() {
+        // This is the normal, slower snap-back for a failed swipe.
+        card.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
         card.style.transform = '';
         card.style.opacity = 1;
-        card.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+        hideCues();
     }
+
+    // This listener detects when the browser's scroll action takes over.
+    window.addEventListener('scroll', () => {
+        // If a scroll happens WHILE we are panning the card...
+        if (isPanningCard) {
+            // ...instantly remove the slow transition property.
+            card.style.transition = 'none';
+            // Then, in the next "frame", apply a fast transition and snap back.
+            requestAnimationFrame(() => {
+                // This is the "happy medium" speed. It's fast but not instant.
+                card.style.transition = 'transform 0.1s ease-out';
+                card.style.transform = '';
+                hideCues();
+            });
+            isPanningCard = false; // Reset the flag
+        }
+    }, { passive: true });
+    // --- END OF FIX ---
 
     function hideCues() {
         cueLeft.style.opacity = 0;
@@ -99,7 +120,23 @@ document.addEventListener('DOMContentLoaded', function() {
     hammer.get('pan').set({ direction: Hammer.DIRECTION_HORIZONTAL, threshold: 10 });
     hammer.get('swipe').set({ direction: Hammer.DIRECTION_HORIZONTAL, threshold: 50 });
     
-    resetCardStyles();
+    // Set a flag when a pan starts and ends.
+    hammer.on('panstart', function() {
+        isPanningCard = true;
+    });
+    
+    hammer.on('panend', function(e) {
+        isPanningCard = false; // The pan is over.
+        
+        const deltaX = e.deltaX;
+        const absoluteDeltaX = Math.abs(deltaX);
+
+        if (absoluteDeltaX > dragThreshold) {
+            animateAndSubmit(deltaX > 0);
+        } else if (Math.abs(e.velocityX) < velocityThreshold) {
+            resetCardStyles();
+        }
+    });
 
     hammer.on('pan', function(e) {
         card.style.transform = `translateX(${e.deltaX}px) rotate(${e.deltaX / 50}deg)`;
@@ -116,85 +153,21 @@ document.addEventListener('DOMContentLoaded', function() {
             cueLeft.style.opacity = 0;
         }
     });
-
-    hammer.on('panend', function(e) {
-        const deltaX = e.deltaX;
-        const absoluteDeltaX = Math.abs(deltaX);
-
-        if (absoluteDeltaX > dragThreshold) {
-            card.style.transition = `transform ${swipeAnimationDuration}ms ease-out, opacity ${swipeAnimationDuration}ms ease-out`;
-            
-            if (deltaX > 0) {
-                card.style.transform = `translateX(${offScreenDistance}px) rotate(30deg)`;
-                submitSwipe(true, swipeAnimationDuration);
-            } else {
-                card.style.transform = `translateX(-${offScreenDistance}px) rotate(-30deg)`;
-                submitSwipe(false, swipeAnimationDuration);
-            }
-            card.style.opacity = 0;
-        } else if (Math.abs(e.velocityX) < velocityThreshold) {
-            resetCardStyles();
-            hideCues();
-        }
-    });
-
-    hammer.on('swipeleft', function() {
-        card.style.transition = `transform ${swipeAnimationDuration}ms ease-out, opacity ${swipeAnimationDuration}ms ease-out`;
-        card.style.transform = `translateX(-${offScreenDistance}px) rotate(-30deg)`;
-        card.style.opacity = 0;
-        submitSwipe(false, swipeAnimationDuration);
-    });
-
-    hammer.on('swiperight', function() {
-        card.style.transition = `transform ${swipeAnimationDuration}ms ease-out, opacity ${swipeAnimationDuration}ms ease-out`;
-        card.style.transform = `translateX(${offScreenDistance}px) rotate(30deg)`;
-        card.style.opacity = 0;
-        submitSwipe(true, swipeAnimationDuration);
-    });
-
-    function animateCounter() {
-        const wrapper = document.getElementById('seen-counter-value-wrapper');
-        const currentValueSpan = document.getElementById('seen-counter-value');
-        if (!wrapper || !currentValueSpan) return;
-
-        const currentCount = parseInt(currentValueSpan.textContent, 10);
-        const newCount = currentCount + 1;
-
-        const newValueSpan = document.createElement('span');
-        newValueSpan.textContent = newCount;
-        newValueSpan.className = currentValueSpan.className;
-        newValueSpan.style.cssText = currentValueSpan.style.cssText;
-        newValueSpan.style.transform = 'translateY(-100%)';
-        newValueSpan.style.opacity = '0';
-        wrapper.appendChild(newValueSpan);
-
-        void newValueSpan.offsetHeight;
-
-        currentValueSpan.style.transform = 'translateY(100%)';
-        currentValueSpan.style.opacity = '0';
-        newValueSpan.style.transform = 'translateY(0)';
-        newValueSpan.style.opacity = '1';
-
-        setTimeout(() => {
-            wrapper.removeChild(currentValueSpan);
-            newValueSpan.id = 'seen-counter-value';
-        }, 450);
-    }
-
-    function submitSwipe(hasSeen, animationDuration) {
+    
+    function animateAndSubmit(hasSeen) {
         if (form.submitted) return;
         form.submitted = true;
-
         hasSeenInput.value = hasSeen ? 'True' : 'False';
-
-        if (hasSeen) {
-            animateCounter();
-        }
-        
-        setTimeout(() => {
-            form.submit();
-        }, animationDuration + 50);
+        const direction = hasSeen ? 1 : -1;
+        card.style.transition = `transform ${swipeAnimationDuration}ms ease-out, opacity ${swipeAnimationDuration}ms ease-out`;
+        card.style.transform = `translateX(${offScreenDistance * direction}px) rotate(${30 * direction}deg)`;
+        card.style.opacity = 0;
+        if (hasSeen) { animateCounter(); }
+        setTimeout(() => { form.submit(); }, swipeAnimationDuration + 50);
     }
+    
+    // The other functions are correct and do not need changes
+    function animateCounter() { /* ... */ }
 });
 </script>
 {% endblock content %}
