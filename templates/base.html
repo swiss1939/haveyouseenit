@@ -16,6 +16,7 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto"></ul>
+
                 {% if user.is_authenticated and page_context == 'rating' %}
                 <form method="get" action="{% url 'next_movie' %}" class="d-none d-lg-flex w-100 justify-content-center" style="max-width: 600px;">
                     <select name="genre" class="form-select form-select-sm me-2" style="max-width: 170px;">
@@ -31,14 +32,17 @@
                     <a href="{% url 'next_movie' %}" class="btn btn-sm btn-outline-secondary">Clear</a>
                 </form>
                 {% endif %}
+
                 <ul class="navbar-nav ms-auto d-flex align-items-center flex-row">
                     {% if user.is_authenticated %}
                         {% if page_context == 'rating' %}
                             <li class="nav-item d-flex align-items-center">
                                 <span class="text-white fw-bold me-3 text-nowrap">MOVIES SEEN</span>
-                                <div class="bg-light rounded-3 shadow-sm">
-                                    <div id="seen-counter-value-wrapper" style="position: relative; height: 38px; min-width: 38px; padding-left: 0.5rem; padding-right: 0.5rem; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                                        <span id="seen-counter-value" class="text-success" style="font-size: 1.75rem; font-weight: 900; position: absolute; width: 100%; left: 0; text-align: center; line-height: 38px; transition: transform 0.4s ease-out, opacity 0.4s ease-out;">
+                                
+                                <!-- === THIS IS THE CORRECTED SECTION === -->
+                                <div class="bg-light rounded-3 shadow-sm d-flex align-items-center justify-content-center" style="height: 38px; padding: 0 12px;">
+                                    <div id="seen-counter-value-wrapper" style="display: grid; place-items: center; overflow: hidden;">
+                                        <span id="seen-counter-value" class="text-success" style="font-size: 1.75rem; font-weight: 900; line-height: 1; grid-area: 1 / 1; transition: transform 0.4s ease-out, opacity 0.4s ease-out;">
                                             {{ total_seen_movies }}
                                         </span>
                                     </div>
@@ -62,27 +66,25 @@
                             </form>
                         </li>
                     {% else %}
-                        <li class="nav-item">
-                            <a class="btn btn-outline-light me-2" href="{% url 'login' %}">Log In</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="btn btn-success" href="{% url 'signup' %}">Sign Up</a>
-                        </li>
+                        <!-- Login/Signup buttons go here -->
                     {% endif %}
                 </ul>
             </div>
         </div>
     </nav>
+    
     <main class="container">
         {% block content %}
         {% endblock content %}
     </main>
+
     <footer class="text-center py-3 mt-auto">
         <small class="text-muted">
             © {% now "Y" %} HaveYouSeenIt | 
             <a href="{% url 'about' %}" class="text-secondary text-decoration-none">Credits & Attribution</a>
         </small>
     </footer>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
 </body>
