@@ -68,3 +68,10 @@ logs/
 # macOS specific files
 # --------------------
 .DS_Store
+
+
+# Production Environment Files
+# ----------------------------
+# These files should only exist on the production server and are not tracked in Git.
+docker-compose.prod.yml
+nginx/
