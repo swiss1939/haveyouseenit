@@ -5,3 +5,4 @@ psycopg2-binary # PostgreSQL adapter
 requests
 tqdm
 django-jazzmin
+gunicorn
