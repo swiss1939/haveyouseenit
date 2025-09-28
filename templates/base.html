@@ -32,7 +32,8 @@
             
             <a class="navbar-brand fw-bold d-none d-lg-block" href="{% url 'next_movie' %}">HAVE YOU SEEN IT?</a>
             <div class="navbar-brand fw-bold d-lg-none">
-                <span class="text-white text-nowrap">MOVIES SEEN </span>
+                <a href="{% url 'next_movie' %}" class="text-decoration-none">
+                    <span class="text-white text-nowrap">MOVIES SEEN </span></a>
                 <span id="seen-counter-value-mobile" class="text-success">{{ total_seen_movies }}</span>
             </div>
             
