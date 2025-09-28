@@ -9,13 +9,24 @@
                     {{ user.first_name }}'s Viewing Summary
                 </h2>
                 
-                <div class="row justify-content-center mb-4">
+                <!-- === THIS IS THE UPDATED SECTION === -->
+                <div class="row justify-content-center text-center mb-4">
+                    <!-- Movies Seen Card -->
                     <div class="col-md-6 mb-3">
-                        <div class="p-3 rounded-3 shadow-lg" style="background-color: #f0f0f0;">
-                            <h5 class="text-uppercase text-muted small text-center fw-bolder" style="font-size: 1.5rem;">TOTAL MOVIES SEEN</h5>
-                            
-                            <p class="text-center text-success" style="font-size: 6rem; font-weight: 900; line-height: 1;">
+                        <div class="p-3 rounded-3 shadow-sm" style="background-color: #f0f0f0;">
+                            <h5 class="text-uppercase text-muted small fw-bolder" style="font-size: 1.25rem;">TOTAL MOVIES SEEN</h5>
+                            <p class="text-success" style="font-size: 5rem; font-weight: 900; line-height: 1;">
                                 {{ total_seen_movies }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Total Rated Card -->
+                    <div class="col-md-6 mb-3">
+                        <div class="p-3 rounded-3 shadow-sm" style="background-color: #f0f0f0;">
+                            <h5 class="text-uppercase text-muted small fw-bolder" style="font-size: 1.25rem;">TOTAL MOVIES RATED</h5>
+                            <p class="text-primary" style="font-size: 5rem; font-weight: 900; line-height: 1;">
+                                {{ total_rated_movies }}
                             </p>
                         </div>
                     </div>

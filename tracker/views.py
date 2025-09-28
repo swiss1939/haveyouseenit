@@ -13,7 +13,7 @@ from .forms import CustomUserCreationForm
 
 
 def get_weighted_random_movie(unseen_movies):
-    # ... (This function is correct and does not need changes)
+    # This function is correct and does not need changes
     tiers = {
         "tentpole": (300_000_000, None), "major": (75_000_000, 300_000_000),
         "mid": (10_000_000, 75_000_000), "low": (1_000_000, 10_000_000),
@@ -46,19 +46,23 @@ def next_movie_view(request):
         movie_id = request.POST.get('movie_id')
         has_seen_status = request.POST.get('has_seen') == 'True'
 
-        # --- FIX #1: Only create a UserMovieView record if the movie has been seen ---
-        if has_seen_status:
-            movie = get_object_or_404(Movie, id=movie_id)
-            try:
-                with transaction.atomic():
-                    UserMovieView.objects.create(user=user, movie=movie, has_seen=True)
-                    profile = user.profile
-                    profile.last_activity = timezone.now()
-                    profile.save()
-            except IntegrityError:
-                # User has already rated this movie, do nothing.
-                pass
-
+        # --- FIX #1: Record BOTH "seen" and "unseen" ratings ---
+        # This now creates a UserMovieView record for every swipe.
+        movie = get_object_or_404(Movie, id=movie_id)
+        try:
+            with transaction.atomic():
+                UserMovieView.objects.get_or_create(
+                    user=user, 
+                    movie=movie, 
+                    defaults={'has_seen': has_seen_status}
+                )
+                profile = user.profile
+                profile.last_activity = timezone.now()
+                profile.save()
+        except IntegrityError:
+            # User has already rated this movie, do nothing.
+            pass
+        
         # Preserve filters after a swipe
         redirect_url = reverse('next_movie')
         genre_id = request.POST.get('genre')
@@ -116,8 +120,18 @@ def next_movie_view(request):
 def profile_view(request):
     user = request.user
     profile = user.profile
-    total_seen_movies = UserMovieView.objects.filter(user=user, has_seen=True).count()
-    context = { 'user': user, 'profile': profile, 'total_seen_movies': total_seen_movies, }
+
+    # --- FIX #2: Calculate both "seen" and "total rated" counts ---
+    seen_movies_count = UserMovieView.objects.filter(user=user, has_seen=True).count()
+    total_rated_count = UserMovieView.objects.filter(user=user).count()
+
+    context = {
+        'user': user,
+        'profile': profile,
+        'total_seen_movies': seen_movies_count,
+        'total_rated_movies': total_rated_count, # Pass the new count to the template
+    }
+    
     return render(request, 'tracker/profile_dashboard.html', context)
 
 def about_view(request):
