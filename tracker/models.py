@@ -11,25 +11,25 @@ class Genre(models.Model):
     def __str__(self): return self.name
 
 class Actor(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255)
     imdb_id = models.CharField(max_length=15, unique=True, null=True, blank=True)
     tmdb_id = models.IntegerField(unique=True, null=True, blank=True)
     def __str__(self): return self.name
 
 class Cinematographer(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255)
     imdb_id = models.CharField(max_length=15, unique=True, null=True, blank=True)
     tmdb_id = models.IntegerField(unique=True, null=True, blank=True)
     def __str__(self): return self.name
 
 class Director(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255)
     imdb_id = models.CharField(max_length=20, unique=True, null=True, blank=True)
     tmdb_id = models.IntegerField(unique=True, null=True, blank=True)
     def __str__(self): return self.name
 
 class Producer(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255)
     imdb_id = models.CharField(max_length=20, unique=True, null=True, blank=True)
     tmdb_id = models.IntegerField(unique=True, null=True, blank=True)
     def __str__(self): return self.name
@@ -72,7 +72,7 @@ class Profile(models.Model):
     def __str__(self): return f"Profile for {self.user.username}"
 
 
-# --- 3. NEW Social and Invite Models ---
+# --- 3. Social and Invite Models ---
 
 def generate_invite_code():
     """Generates a unique, 8-character invite code."""
