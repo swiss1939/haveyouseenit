@@ -87,6 +87,37 @@ This section outlines the next steps for development.
         3.  The person search bar should submit when the user presses "Enter".
         4.  Implement custom, in-field "X" buttons that appear only when a filter is active, allowing users to clear a specific filter with a single click.
 
+---
+
+## Current Development Status (`feature/social-and-invitecodes`)
+
+This section outlines the progress and pending tasks for the social and invite code system.
+
+### Completed Functionality:
+
+-   **Data Models:** `InviteCode` and `Friendship` models have been created and migrated.
+-   **Invite-Only Signup:** The user creation form now requires a valid, unused invite code.
+-   **Auto-Friending:** Users who sign up via an invite code are automatically friended with the inviter.
+-   **Profile Page Structure:** The profile page is a single, centered card that integrates all social features.
+-   **Friend Management:**
+    -   Users can send friend requests from their profile page.
+    -   Users can accept/decline incoming requests from their own profile page.
+
+### **In Progress / Next Tasks:**
+
+-   **1. Fix Contextual Action Buttons on Profiles (High Priority):**
+    -   **Goal:** When viewing another user's profile, the page should display the correct action button based on the friendship status.
+    -   **Current Bug:** If user B has sent a friend request to user A, when user A views user B's profile, it incorrectly shows the public view instead of the "Accept/Decline Request" buttons.
+
+-   **2. Upgrade Search Functionality:**
+    -   **Goal:** Convert the static, page-reloading search forms (both in the header and on the profile page) into a dynamic, modern autocomplete experience.
+    -   **Details:**
+        a.  **Dynamic Loading:** Use JavaScript and a backend API to fetch and display search results instantly without a full page reload.
+        b.  **Autocomplete UI:** The search fields should show a dropdown list of suggestions as the user types.
+        c.  **Inexact Matching:** The search logic should be upgraded to return *similar* matches (handling typos), not just exact ones. For the production environment, this will be implemented using PostgreSQL's Trigram Similarity.
+
+---
+
 ### Next Major Feature
 
 -   **Advanced Person Filtering by Role:**

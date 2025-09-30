@@ -5,47 +5,185 @@
     <div class="row justify-content-center">
         <div class="col-lg-8 col-md-10">
             <div class="card shadow-lg p-4 rounded-3">
-                <h2 class="card-title text-center mb-4 fw-bold text-primary">
-                    {{ user.first_name }}'s Viewing Summary
-                </h2>
                 
-                <!-- === THIS IS THE UPDATED SECTION === -->
+                <h2 class="card-title text-center mb-4 fw-bold text-primary">
+                    {% if is_self %}Your Profile{% else %}{{ profile_owner.username }}'s Profile{% endif %}
+                </h2>
+
                 <div class="row justify-content-center text-center mb-4">
-                    <!-- Movies Seen Card -->
                     <div class="col-md-6 mb-3">
                         <div class="p-3 rounded-3 shadow-sm" style="background-color: #f0f0f0;">
-                            <h5 class="text-uppercase text-muted small fw-bolder" style="font-size: 1.25rem;">TOTAL MOVIES SEEN</h5>
+                            <h5 class="text-uppercase text-muted small fw-bolder">MOVIES SEEN</h5>
                             <p class="text-success" style="font-size: 5rem; font-weight: 900; line-height: 1;">
                                 {{ total_seen_movies }}
                             </p>
                         </div>
                     </div>
-
-                    <!-- Total Rated Card -->
+                    
+                    {% if is_self or friendship_status == 'FRIENDS' or friendship_status == 'REQUEST_RECEIVED' %}
                     <div class="col-md-6 mb-3">
                         <div class="p-3 rounded-3 shadow-sm" style="background-color: #f0f0f0;">
-                            <h5 class="text-uppercase text-muted small fw-bolder" style="font-size: 1.25rem;">TOTAL MOVIES RATED</h5>
+                            <h5 class="text-uppercase text-muted small fw-bolder">MOVIES RATED</h5>
                             <p class="text-primary" style="font-size: 5rem; font-weight: 900; line-height: 1;">
                                 {{ total_rated_movies }}
                             </p>
                         </div>
                     </div>
+                    {% endif %}
                 </div>
 
-                <h4 class="mt-4 mb-3 border-bottom pb-2">Account Details</h4>
-                <div class="row small text-muted">
-                    <div class="col-sm-6 mb-2"><strong>Email:</strong> {{ user.email }}</div>
-                    <div class="col-sm-6 mb-2"><strong>Date of Birth:</strong> {{ profile.date_of_birth }}</div>
-                    <div class="col-sm-6 mb-2"><strong>Joined:</strong> {{ profile.join_date|date:"F j, Y" }}</div>
-                    <div class="col-sm-6 mb-2"><strong>Last Activity:</strong> {{ profile.last_activity|timesince }} ago</div>
-                </div>
-
-                <hr class="mt-4">
+                {% if not is_self %}
+                    <div class="text-center mb-4">
                 
-                <h3 class="mt-4 text-center text-secondary">Viewing Insights (In Development)</h3>
-                <p class="text-center text-muted">We'll display your Top Genres, Actors, and Decades here soon!</p>
+                        {% if friendship_status == 'REQUEST_RECEIVED' %}
+                            <p class="text-muted">{{ profile_owner.username }} has sent you a friend request.</p>
+                            <form method="post" action="{% url 'profile_dashboard' username=profile_owner.username %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="request_id" value="{{ request_obj.id }}">
+                                <input type="hidden" name="next_url" value="{{ request.path }}">
+                                <button type="submit" name="accept_request" class="btn btn-success">Accept Request</button>
+                                <button type="submit" name="decline_request" class="btn btn-danger ms-1">Decline</button>
+                            </form>
+                        
+                        {% elif friendship_status == 'REQUEST_SENT' %}
+                            <button class="btn btn-secondary" disabled>Friend Request Sent</button>
+                        
+                        {% elif friendship_status == 'NOT_FRIENDS' %}
+                            <form method="post" action="{% url 'profile_dashboard' username=profile_owner.username %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="user_id" value="{{ profile_owner.id }}">
+                                <input type="hidden" name="next_url" value="{{ request.path }}">
+                                <button type="submit" name="add_friend" class="btn btn-info">Add Friend</button>
+                            </form>
+                        {% endif %}
+                
+                    </div>
+                {% endif %}
+
+                {% if is_self %}
+                    <hr class="mt-2 mb-4">
+                    <h4 class="mb-3 border-bottom pb-2">Account Details</h4>
+                    <div class="row small text-muted mb-4">
+                        <div class="col-sm-6 mb-2"><strong>Email:</strong> {{ user.email }}</div>
+                        <div class="col-sm-6 mb-2"><strong>Date of Birth:</strong> {{ profile.date_of_birth }}</div>
+                        <div class="col-sm-6 mb-2"><strong>Joined:</strong> {{ profile.join_date|date:"F j, Y" }}</div>
+                        <div class="col-sm-6 mb-2"><strong>Last Activity:</strong> {{ profile.last_activity|timesince }} ago</div>
+                    </div>
+                    
+                    <h4 class="mb-3 border-bottom pb-2">Friends & Invites</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {% if incoming_requests %}
+                                <h5 class="mt-2">Incoming Requests ({{ incoming_requests.count }})</h5>
+                                <div class="list-group mb-4">
+                                    {% for friend_req in incoming_requests %}
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <a href="{% url 'profile_dashboard' username=friend_req.from_user.username %}" class="fw-bold text-decoration-none">
+                                                    {{ friend_req.from_user.username }}
+                                                </a>
+                                            </div>
+                                            <form method="post" action="{% url 'my_profile' %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="request_id" value="{{ friend_req.id }}">
+                                                <input type="hidden" name="next_url" value="{{ request.path }}">
+                                                <button type="submit" name="accept_request" class="btn btn-sm btn-success">Accept</button>
+                                                <button type="submit" name="decline_request" class="btn btn-sm btn-danger ms-1">Decline</button>
+                                            </form>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+
+                            {% if sent_requests %}
+                                <h5 class="mt-2">Sent Requests ({{ sent_requests.count }})</h5>
+                                <div class="list-group mb-4">
+                                {% for sent_req in sent_requests %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>To: <a href="{% url 'profile_dashboard' username=sent_req.to_user.username %}">{{ sent_req.to_user.username }}</a></span>
+                                        <form method="post" action="{% url 'my_profile' %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="request_id" value="{{ sent_req.id }}">
+                                            <input type="hidden" name="next_url" value="{{ request.path }}">
+                                            <button type="submit" name="cancel_request" class="btn btn-sm btn-warning">Cancel</button>
+                                        </form>
+                                    </div>
+                                {% endfor %}
+                                </div>
+                            {% endif %}
+                            
+                            <h5 class="mt-2">Friends ({{ friends_list.count }})</h5>
+                            <div class="list-group mb-4">
+                                {% for friendship in friends_list %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <a href="{% url 'profile_dashboard' username=friendship.to_user.username %}" class="text-decoration-none fw-bold">{{ friendship.to_user.username }}</a>
+                                            {% if friendship.to_user.id in invited_friend_ids %}
+                                                <span class="ms-2" title="You invited this friend!">
+                                                    <i class="bi bi-envelope-check-fill text-success"></i>
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                        <form method="post" action="{% url 'my_profile' %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="remove_friend_id" value="{{ friendship.to_user.id }}">
+                                            <input type="hidden" name="next_url" value="{{ request.path }}">
+                                            <button type="submit" name="remove_friend" class="btn btn-sm btn-outline-danger">Remove</button>
+                                        </form>
+                                    </div>
+                                {% empty %}
+                                    <p class="text-muted small p-2">You haven't added any friends yet.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h5 class="mt-2">Find Friends</h5>
+                            <form method="post" class="mb-4" action="{% url 'my_profile' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next_url" value="{{ request.path }}">
+                                <div class="input-group"><input type="text" name="query" class="form-control" placeholder="Search by username..."><button class="btn btn-outline-primary" type="submit" name="search_user">Search</button></div>
+                            </form>
+                            {% if search_results is not None %}
+                                <ul class="list-group mb-4">
+                                {% for user_data in search_results %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <a href="{% url 'profile_dashboard' username=user_data.username %}">{{ user_data.username }}</a>
+                                        <form method="post" action="{% url 'profile_dashboard' username=user_data.username %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="user_id" value="{{ user_data.id }}">
+                                            <input type="hidden" name="next_url" value="{{ request.path }}">
+                                            <button type="submit" name="add_friend" class="btn btn-sm btn-info">Add</button>
+                                        </form>
+                                    </li>
+                                {% empty %}
+                                    <li class="list-group-item text-muted">No users found.</li>
+                                {% endfor %}
+                                </ul>
+                            {% endif %}
+
+                            <h5 class="mt-2">Invite Links</h5>
+                            {% for code in available_codes %}
+                                {% url 'signup_with_code' invite_code=code.code as signup_link %}
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control" value="{{ request.scheme }}://{{ request.get_host }}{{ signup_link }}" readonly id="invite-link-{{ code.id }}">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="copyCode('invite-link-{{ code.id }}')">Copy Link</button>
+                                </div>
+                            {% empty %}
+                                <p class="text-muted small">You have no available invite codes. Keep rating movies to earn more!</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
+<script>
+    function copyCode(elementId) {
+        const input = document.getElementById(elementId);
+        input.select();
+        document.execCommand('copy');
+    }
+</script>
 {% endblock content %}
