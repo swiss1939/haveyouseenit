@@ -4,15 +4,17 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # Main movie loop view (GET/POST handler)
     path('', views.next_movie_view, name='next_movie'),
-
-    # User Signup View
+    
+    # NEW: URL for invite links, captures the code
+    path('signup/<str:invite_code>/', views.SignUpView.as_view(), name='signup_with_code'),
     path('signup/', views.SignUpView.as_view(), name='signup'),
+    
+    # --- UPDATED PROFILE URLS ---
+    # A link to /profile/ will now show the logged-in user's profile
+    path('profile/', views.profile_view, name='my_profile'),
+    # This URL is for viewing a specific user's public profile
+    path('profile/<str:username>/', views.profile_view, name='profile_dashboard'),
 
-    # User Profile View
-    path('profile/', views.profile_view, name='profile_dashboard'),
-
-    # About/Credits Page
     path('about/', views.about_view, name='about'),
 ]
