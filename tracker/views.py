@@ -144,7 +144,7 @@ def next_movie_view(request):
 
             for genre in movie.genre.all():
                 if genre.id in top_genre_ids:
-                    score += 25
+                    score += 8
 
             for director in movie.directors.all():
                 if director.id in top_director_ids:
