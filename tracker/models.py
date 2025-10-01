@@ -47,6 +47,8 @@ class Movie(models.Model):
     tmdb_id = models.IntegerField(unique=True, null=True, blank=True)
     poster_url = models.URLField(max_length=500, null=True, blank=True)
     genre = models.ManyToManyField(Genre)
+    collection_id = models.IntegerField(null=True, blank=True)
+    collection_name = models.CharField(max_length=255, null=True, blank=True)
     actors = models.ManyToManyField(Actor, through='MovieCastCredit')
     cinematographers = models.ManyToManyField(Cinematographer)
     directors = models.ManyToManyField(Director)
