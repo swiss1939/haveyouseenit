@@ -4,7 +4,8 @@ import requests
 import os
 import sys
 from django.core.management.base import BaseCommand
-from tracker.models import Movie, Actor, Cinematographer, Director, Producer
+# **MODIFICATION**: Added MovieCastCredit import
+from tracker.models import Movie, Actor, Cinematographer, Director, Producer, MovieCastCredit
 from django.db import transaction, IntegrityError
 from tqdm import tqdm 
 
@@ -16,6 +17,13 @@ REQUEST_DELAY = 0.25
 
 class Command(BaseCommand):
     help = 'Fetches detailed stats (Revenue, Runtime) and Credits (All Personnel) for existing movies.'
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--rescan-all',
+            action='store_true',
+            help='Force the script to re-scan all movies, even those already processed.'
+        )
 
     def _fetch_details_and_credits(self, tmdb_id):
         """Fetches both details and credits in a single request using append_to_response."""
@@ -35,11 +43,16 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR('TMDB_API_KEY not set. Aborting.'))
             return
             
-        movies_to_process = Movie.objects.filter(actors__isnull=True).distinct()
+        if options['rescan_all']:
+            self.stdout.write(self.style.WARNING('--- RESCAN ALL mode enabled. Processing all movies. ---'))
+            movies_to_process = Movie.objects.all()
+        else:
+            movies_to_process = Movie.objects.filter(actors__isnull=True).distinct()
+
         total_movies = movies_to_process.count()
 
         if total_movies == 0:
-            self.stdout.write(self.style.NOTICE("No new movies found requiring stats or credit backfill. Exiting."))
+            self.stdout.write(self.style.NOTICE("No movies found to process. Use --rescan-all to process every movie."))
             return
 
         self.stdout.write(self.style.NOTICE(f"Found {total_movies} movies to backfill stats and credits for."))
@@ -57,24 +70,33 @@ class Command(BaseCommand):
                         movie.revenue = data.get('revenue', 0)
                         movie.runtime_minutes = data.get('runtime')
                         
-                        # **MODIFICATION HERE**
-                        # Sanitize the imdb_id: convert empty strings to None to avoid unique constraint errors.
                         imdb_id_val = data.get('imdb_id')
                         movie.imdb_id = imdb_id_val if imdb_id_val else None
                         
                         movie.save()
 
+                        # Clear existing relationships before adding new ones to ensure a clean scan
+                        movie.actors.clear()
+                        movie.directors.clear()
+                        movie.producers.clear()
+                        movie.cinematographers.clear()
+
                         credits = data.get('credits', {})
                         
-                        # Process Actors (Top 10)
-                        for cast_member in credits.get('cast', [])[:10]:
+                        # **MODIFICATION HERE**: This is the critical change for the "through" model.
+                        # Process Actors (Top 10) and save their order.
+                        for i, cast_member in enumerate(credits.get('cast', [])[:25]):
                             actor_obj, _ = Actor.objects.get_or_create(
                                 tmdb_id=cast_member['id'],
                                 defaults={'name': cast_member['name']}
                             )
-                            movie.actors.add(actor_obj)
+                            # Create the relationship through the new model, saving the order.
+                            MovieCastCredit.objects.create(
+                                movie=movie,
+                                actor=actor_obj,
+                                order=i
+                            )
 
-                        # Process Crew (Directors, Producers, Cinematographers)
                         for crew_member in credits.get('crew', []):
                             job = crew_member.get('job')
                             person_tmdb_id = crew_member['id']

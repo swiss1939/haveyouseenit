@@ -47,7 +47,7 @@ class Movie(models.Model):
     tmdb_id = models.IntegerField(unique=True, null=True, blank=True)
     poster_url = models.URLField(max_length=500, null=True, blank=True)
     genre = models.ManyToManyField(Genre)
-    actors = models.ManyToManyField(Actor)
+    actors = models.ManyToManyField(Actor, through='MovieCastCredit')
     cinematographers = models.ManyToManyField(Cinematographer)
     directors = models.ManyToManyField(Director)
     producers = models.ManyToManyField(Producer)
@@ -72,7 +72,18 @@ class Profile(models.Model):
     def __str__(self): return f"Profile for {self.user.username}"
 
 
-# --- 3. Social and Invite Models ---
+# --- 3. Relationship Tables ---
+
+class MovieCastCredit(models.Model):
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE)
+    actor = models.ForeignKey(Actor, on_delete=models.CASCADE)
+    order = models.IntegerField()
+
+    class Meta:
+        ordering = ['order']
+
+
+# --- 4. Social and Invite Models ---
 
 def generate_invite_code():
     """Generates a unique, 8-character invite code."""

@@ -3,9 +3,10 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
+# **MODIFICATION**: Added MovieCastCredit
 from .models import (
     Profile, Movie, Genre, Actor, Cinematographer,
-    Director, Producer, UserMovieView, InviteCode, Friendship
+    Director, Producer, UserMovieView, InviteCode, Friendship, MovieCastCredit
 )
 
 # --- User and Profile Admin (No changes here) ---
@@ -24,7 +25,17 @@ admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
 
 
-# --- Movie and Person Admin (No changes here) ---
+# --- Movie and Person Admin ---
+
+# **NEW CLASS**
+# This defines the inline editor for the cast on the Movie admin page.
+class MovieCastCreditInline(admin.TabularInline):
+    model = MovieCastCredit
+    fields = ('actor', 'order')
+    autocomplete_fields = ('actor',)
+    extra = 1 # Provides one extra slot for adding an actor.
+
+
 @admin.register(Actor)
 class ActorAdmin(admin.ModelAdmin):
     search_fields = ('name',)
@@ -41,23 +52,31 @@ class ProducerAdmin(admin.ModelAdmin):
 class CinematographerAdmin(admin.ModelAdmin):
     search_fields = ('name',)
 
+
 @admin.register(Movie)
 class MovieAdmin(admin.ModelAdmin):
     list_display = ('title', 'release_year', 'runtime_minutes', 'revenue')
     list_filter = ('release_year', 'genre')
     search_fields = ('title',)
-    autocomplete_fields = ('actors', 'cinematographers', 'directors', 'producers')
+    
+    # **MODIFICATION**: Removed 'actors'
+    autocomplete_fields = ('cinematographers', 'directors', 'producers')
     filter_horizontal = ('genre',)
+    
     fieldsets = (
         ('Core Information', {'fields': ('title', 'release_year', 'plot_summary')}),
-        ('Statistics & Metadata', {'fields': ('runtime_minutes', 'revenue', 'poster_url')}),
+        ('Statistics & Metadata', {'fields': ('runtime_minutes', 'revenue', 'poster_url', 'collection_id', 'collection_name')}),
         ('External IDs (Read-Only)', {'classes': ('collapse',), 'fields': ('imdb_id', 'tmdb_id')}),
-        ('Personnel & Genre', {'fields': ('genre', 'directors', 'producers', 'actors', 'cinematographers')}),
+        # **MODIFICATION**: Removed 'actors'
+        ('Personnel & Genre', {'fields': ('genre', 'directors', 'producers', 'cinematographers')}),
     )
     readonly_fields = ('imdb_id', 'tmdb_id')
+    
+    # **MODIFICATION**: Added the new inline class
+    inlines = [MovieCastCreditInline]
 
 
-# --- Admin Interfaces for Invite Codes (No changes here) ---
+# --- Admin Interfaces for Invite Codes and Friendships ---
 
 @admin.register(InviteCode)
 class InviteCodeAdmin(admin.ModelAdmin):
@@ -67,8 +86,6 @@ class InviteCodeAdmin(admin.ModelAdmin):
     search_fields = ('code', 'generated_by__username', 'used_by__username')
     readonly_fields = ('code', 'used_by', 'created_at', 'used_at')
 
-# --- MODIFIED: Friendship Admin with Sync Logic ---
-
 @admin.register(Friendship)
 class FriendshipAdmin(admin.ModelAdmin):
     """Admin interface for managing friendships."""
@@ -77,29 +94,17 @@ class FriendshipAdmin(admin.ModelAdmin):
     search_fields = ('from_user__username', 'to_user__username')
 
     def save_model(self, request, obj, form, change):
-        """
-        When a friendship is changed, automatically update the reciprocal record to match.
-        """
-        # First, save the original object that the user just edited in the admin form.
         super().save_model(request, obj, form, change)
-
-        # This logic should only run when changing an existing object, not creating a new one.
         if change:
             try:
-                # Find the corresponding friendship record in the opposite direction.
                 reciprocal_friendship = Friendship.objects.get(
                     from_user=obj.to_user,
                     to_user=obj.from_user
                 )
-
-                # Sync the status and acceptance timestamp to ensure both records are identical.
                 reciprocal_friendship.status = obj.status
                 reciprocal_friendship.accepted_at = obj.accepted_at
                 reciprocal_friendship.save()
-
             except Friendship.DoesNotExist:
-                # If there's no reciprocal record (e.g., a one-way PENDING request),
-                # there is nothing to sync, so we can safely do nothing.
                 pass
 
 
