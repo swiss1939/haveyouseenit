@@ -1,5 +1,3 @@
-# tracker/views.py
-
 import random
 from django.db.models import Q
 from django.contrib.auth.models import User
@@ -11,15 +9,12 @@ from django.db import transaction, IntegrityError
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.postgres.search import TrigramSimilarity
-# **MODIFICATION**: messages import no longer needed here
 from .models import Movie, UserMovieView, Profile, Genre, InviteCode, Friendship
 from .forms import CustomUserCreationForm
-# **NEW IMPORT**
 from .signals import milestone_reached
 
 
 def get_weighted_random_movie(unseen_movies):
-    # This function is correct and does not need changes
     tiers = {
         "tentpole": (300_000_000, None), "major": (75_000_000, 300_000_000),
         "mid": (10_000_000, 75_000_000), "low": (1_000_000, 10_000_000),
@@ -65,12 +60,9 @@ def next_movie_view(request):
                     user=user, movie=movie, defaults={'has_seen': has_seen_status}
                 )
                 
-                # **MODIFICATION**: Logic moved to signal
                 if created:
                     total_rated = UserMovieView.objects.filter(user=user).count()
-                    # Check if the new total is a milestone
                     if total_rated == 250 or (total_rated > 250 and (total_rated - 250) % 100 == 0):
-                        # Send the custom signal, passing the request and user info
                         milestone_reached.send(
                             sender=user.__class__, 
                             user=user, 
@@ -93,7 +85,6 @@ def next_movie_view(request):
         if params: redirect_url += '?' + '&'.join(params)
         return redirect(redirect_url)
 
-    # --- GET request logic remains unchanged ---
     viewed_movie_ids = UserMovieView.objects.filter(user=user).values_list('movie_id', flat=True)
     unseen_movies = Movie.objects.exclude(id__in=viewed_movie_ids)
     
@@ -229,9 +220,10 @@ def profile_view(request, username=None):
 
         context.update({
             'available_codes': InviteCode.objects.filter(generated_by=current_user, used_by__isnull=True),
-            'friends_list': Friendship.objects.filter(from_user=current_user, status='ACCEPTED'),
-            'incoming_requests': Friendship.objects.filter(to_user=current_user, status='PENDING'),
-            'sent_requests': Friendship.objects.filter(from_user=current_user, status='PENDING'),
+            # **OPTIMIZATION**: Fetch related user data in a single query
+            'friends_list': Friendship.objects.filter(from_user=current_user, status='ACCEPTED').select_related('to_user'),
+            'incoming_requests': Friendship.objects.filter(to_user=current_user, status='PENDING').select_related('from_user'),
+            'sent_requests': Friendship.objects.filter(from_user=current_user, status='PENDING').select_related('to_user'),
             'search_results': request.session.pop('search_results', None),
             'invited_friend_ids': invited_friend_ids,
         })
