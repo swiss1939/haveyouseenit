@@ -15,7 +15,6 @@ from .signals import milestone_reached
 
 
 def get_weighted_random_movie(unseen_movies):
-    # This function is correct and does not need changes
     tiers = {
         "tentpole": (300_000_000, None), "major": (75_000_000, 300_000_000),
         "mid": (10_000_000, 75_000_000), "low": (1_000_000, 10_000_000),
@@ -86,9 +85,9 @@ def next_movie_view(request):
         if params: redirect_url += '?' + '&'.join(params)
         return redirect(redirect_url)
 
-    # --- GET LOGIC WITH SIMPLIFIED PERSONALIZED WEIGHTING ---
+    # --- GET LOGIC WITH PERSONALIZED WEIGHTING ---
     viewed_movie_ids = UserMovieView.objects.filter(user=user).values_list('movie_id', flat=True)
-    unseen_movies = Movie.objects.exclude(id__in=viewed_movie_ids).prefetch_related('directors', 'genre')
+    unseen_movies = Movie.objects.exclude(id__in=viewed_movie_ids)
     
     genre_id = request.GET.get('genre')
     person_query = request.GET.get('person_query', '').strip()
@@ -109,18 +108,14 @@ def next_movie_view(request):
     if seen_movie_count >= 250:
         seen_movies = Movie.objects.filter(id__in=UserMovieView.objects.filter(user=user, has_seen=True).values_list('movie_id', flat=True))
         
-        # **MODIFICATION HERE**: Added filter for the 5-movie minimum.
-        # 1. Get a ranked list of all eligible directors by seen count.
         all_ranked_director_ids = seen_movies.values_list('directors__id', flat=True) \
             .annotate(count=Count('directors__id')) \
             .filter(count__gte=5) \
             .order_by('-count')
 
-        # 2. Get a set of all directors who have at least one unseen movie.
         actionable_director_ids = set(unseen_movies.exclude(directors__isnull=True) \
             .values_list('directors__id', flat=True).distinct())
         
-        # 3. Find the top 5 from the ranked list that are also actionable.
         top_director_ids = []
         for director_id in all_ranked_director_ids:
             if director_id in actionable_director_ids:
@@ -128,7 +123,17 @@ def next_movie_view(request):
             if len(top_director_ids) == 5:
                 break
         
-        candidate_movies = unseen_movies.order_by('?')[:500]
+        # **MODIFICATION HERE**: Replaced slow order_by('?') with a performant random sample.
+        # 1. Get a list of all possible primary keys for unseen movies.
+        unseen_pks = unseen_movies.values_list('pk', flat=True)
+        
+        # 2. Randomly sample 500 of those keys.
+        sample_size = min(len(unseen_pks), 500)
+        random_pks = random.sample(list(unseen_pks), sample_size)
+        
+        # 3. Fetch only the movies for those 500 keys. This is a very fast query.
+        candidate_movies = Movie.objects.filter(pk__in=random_pks).prefetch_related('directors', 'genre')
+
         scored_movies = []
         revenue_tiers = { "tentpole": 50, "major": 30, "mid": 10, "low": 5, "micro": 1 }
         
@@ -142,7 +147,7 @@ def next_movie_view(request):
 
             for director in movie.directors.all():
                 if director.id in top_director_ids:
-                    score += 40 # Director match bonus
+                    score += 40 
             
             scored_movies.append({'movie': movie, 'score': score})
             
@@ -175,7 +180,6 @@ def next_movie_view(request):
 
 @login_required
 def profile_view(request, username=None):
-    # ... (profile_view is unchanged) ...
     current_user = request.user
     
     if username:
