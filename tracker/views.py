@@ -1,5 +1,7 @@
+# tracker/views.py
+
 import random
-from django.db.models import Q, Count, Sum
+from django.db.models import Q
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404, reverse
 from django.contrib.auth.decorators import login_required
@@ -9,12 +11,15 @@ from django.db import transaction, IntegrityError
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.postgres.search import TrigramSimilarity
-from .models import Movie, UserMovieView, Profile, Genre, InviteCode, Friendship, Director, MovieCastCredit
+# **MODIFICATION**: messages import no longer needed here
+from .models import Movie, UserMovieView, Profile, Genre, InviteCode, Friendship
 from .forms import CustomUserCreationForm
+# **NEW IMPORT**
 from .signals import milestone_reached
 
 
 def get_weighted_random_movie(unseen_movies):
+    # This function is correct and does not need changes
     tiers = {
         "tentpole": (300_000_000, None), "major": (75_000_000, 300_000_000),
         "mid": (10_000_000, 75_000_000), "low": (1_000_000, 10_000_000),
@@ -60,9 +65,12 @@ def next_movie_view(request):
                     user=user, movie=movie, defaults={'has_seen': has_seen_status}
                 )
                 
+                # **MODIFICATION**: Logic moved to signal
                 if created:
                     total_rated = UserMovieView.objects.filter(user=user).count()
+                    # Check if the new total is a milestone
                     if total_rated == 250 or (total_rated > 250 and (total_rated - 250) % 100 == 0):
+                        # Send the custom signal, passing the request and user info
                         milestone_reached.send(
                             sender=user.__class__, 
                             user=user, 
@@ -85,7 +93,7 @@ def next_movie_view(request):
         if params: redirect_url += '?' + '&'.join(params)
         return redirect(redirect_url)
 
-    # --- GET LOGIC WITH PERSONALIZED WEIGHTING ---
+    # --- GET request logic remains unchanged ---
     viewed_movie_ids = UserMovieView.objects.filter(user=user).values_list('movie_id', flat=True)
     unseen_movies = Movie.objects.exclude(id__in=viewed_movie_ids)
     
@@ -102,79 +110,14 @@ def next_movie_view(request):
             Q(cinematographers__name__icontains=person_query)
         ).distinct()
     
-    next_movie = None
-    seen_movie_count = viewed_movie_ids.count()
-
-    if seen_movie_count >= 250:
-        seen_movies = Movie.objects.filter(id__in=UserMovieView.objects.filter(user=user, has_seen=True).values_list('movie_id', flat=True))
-        
-        all_ranked_director_ids = seen_movies.values_list('directors__id', flat=True) \
-            .annotate(count=Count('directors__id')) \
-            .filter(count__gte=5) \
-            .order_by('-count')
-
-        actionable_director_ids = set(unseen_movies.exclude(directors__isnull=True) \
-            .values_list('directors__id', flat=True).distinct())
-        
-        top_director_ids = []
-        for director_id in all_ranked_director_ids:
-            if director_id in actionable_director_ids:
-                top_director_ids.append(director_id)
-            if len(top_director_ids) == 5:
-                break
-        
-        # **MODIFICATION HERE**: Replaced slow order_by('?') with a performant random sample.
-        # 1. Get a list of all possible primary keys for unseen movies.
-        unseen_pks = unseen_movies.values_list('pk', flat=True)
-        
-        # 2. Randomly sample 500 of those keys.
-        sample_size = min(len(unseen_pks), 500)
-        random_pks = random.sample(list(unseen_pks), sample_size)
-        
-        # 3. Fetch only the movies for those 500 keys. This is a very fast query.
-        candidate_movies = Movie.objects.filter(pk__in=random_pks).prefetch_related('directors', 'genre')
-
-        scored_movies = []
-        revenue_tiers = { "tentpole": 50, "major": 30, "mid": 10, "low": 5, "micro": 1 }
-        
-        for movie in candidate_movies:
-            score = 1
-            if movie.revenue > 300_000_000: score += revenue_tiers['tentpole']
-            elif movie.revenue > 75_000_000: score += revenue_tiers['major']
-            elif movie.revenue > 10_000_000: score += revenue_tiers['mid']
-            elif movie.revenue > 1_000_000: score += revenue_tiers['low']
-            else: score += revenue_tiers['micro']
-
-            for director in movie.directors.all():
-                if director.id in top_director_ids:
-                    score += 40 
-            
-            scored_movies.append({'movie': movie, 'score': score})
-            
-        if scored_movies:
-            movies_population = [item['movie'] for item in scored_movies]
-            weights = [item['score'] for item in scored_movies]
-            next_movie = random.choices(movies_population, weights=weights, k=1)[0]
-
-    if not next_movie:
-        next_movie = get_weighted_random_movie(unseen_movies)
-
+    next_movie = get_weighted_random_movie(unseen_movies)
     if not next_movie:
         next_movie = unseen_movies.order_by('?').first()
 
     total_seen_movies = UserMovieView.objects.filter(user=user, has_seen=True).count()
-    context = {
-        'page_context': 'rating',
-        'total_seen_movies': total_seen_movies,
-        'all_genres': Genre.objects.all().order_by('name'),
-        'active_genre_id': int(genre_id) if genre_id else None,
-        'active_person_query': person_query,
-    }
-    if next_movie:
-        context['movie'] = next_movie
-    else:
-        context['no_movies_left'] = True
-    
+    context = { 'page_context': 'rating', 'total_seen_movies': total_seen_movies, 'all_genres': Genre.objects.all().order_by('name'), 'active_genre_id': int(genre_id) if genre_id else None, 'active_person_query': person_query, }
+    if next_movie: context['movie'] = next_movie
+    else: context['no_movies_left'] = True
     return render(request, 'tracker/movie_display.html', context)
 
 

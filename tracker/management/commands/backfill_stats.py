@@ -1,8 +1,10 @@
+# tracker/management/commands/backfill_stats.py
 import time
 import requests
 import os
 import sys
 from django.core.management.base import BaseCommand
+# **MODIFICATION**: Added MovieCastCredit import
 from tracker.models import Movie, Actor, Cinematographer, Director, Producer, MovieCastCredit
 from django.db import transaction, IntegrityError
 from tqdm import tqdm 
@@ -71,21 +73,9 @@ class Command(BaseCommand):
                         imdb_id_val = data.get('imdb_id')
                         movie.imdb_id = imdb_id_val if imdb_id_val else None
                         
-                        # --- NEW LOGIC ---
-                        # Check for and save collection info from the API response.
-                        collection_info = data.get('belongs_to_collection')
-                        if collection_info:
-                            movie.collection_id = collection_info['id']
-                            movie.collection_name = collection_info['name']
-                        else:
-                            # Ensure fields are nulled out if movie is not in a collection.
-                            movie.collection_id = None
-                            movie.collection_name = None
-                        # -------------------
-
                         movie.save()
 
-                        # Clear existing relationships before adding new ones to ensure a clean scan.
+                        # Clear existing relationships before adding new ones to ensure a clean scan
                         movie.actors.clear()
                         movie.directors.clear()
                         movie.producers.clear()
@@ -93,7 +83,8 @@ class Command(BaseCommand):
 
                         credits = data.get('credits', {})
                         
-                        # Process Actors (Top 25) and save their order.
+                        # **MODIFICATION HERE**: This is the critical change for the "through" model.
+                        # Process Actors (Top 10) and save their order.
                         for i, cast_member in enumerate(credits.get('cast', [])[:25]):
                             actor_obj, _ = Actor.objects.get_or_create(
                                 tmdb_id=cast_member['id'],

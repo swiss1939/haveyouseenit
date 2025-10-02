@@ -79,26 +79,34 @@ document.addEventListener('DOMContentLoaded', function() {
     const swipeAnimationDuration = 400;
     const offScreenDistance = 1500;
     
+    // --- THIS IS THE NEW, SIMPLIFIED FIX ---
     let isPanningCard = false;
-    
+
     function resetCardStyles() {
+        // This is the normal, slower snap-back for a failed swipe.
         card.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
         card.style.transform = '';
         card.style.opacity = 1;
         hideCues();
     }
 
+    // This listener detects when the browser's scroll action takes over.
     window.addEventListener('scroll', () => {
+        // If a scroll happens WHILE we are panning the card...
         if (isPanningCard) {
+            // ...instantly remove the slow transition property.
             card.style.transition = 'none';
+            // Then, in the next "frame", apply a fast transition and snap back.
             requestAnimationFrame(() => {
+                // This is the "happy medium" speed. It's fast but not instant.
                 card.style.transition = 'transform 0.1s ease-out';
                 card.style.transform = '';
                 hideCues();
             });
-            isPanningCard = false;
+            isPanningCard = false; // Reset the flag
         }
     }, { passive: true });
+    // --- END OF FIX ---
 
     function hideCues() {
         cueLeft.style.opacity = 0;
@@ -112,12 +120,13 @@ document.addEventListener('DOMContentLoaded', function() {
     hammer.get('pan').set({ direction: Hammer.DIRECTION_HORIZONTAL, threshold: 10 });
     hammer.get('swipe').set({ direction: Hammer.DIRECTION_HORIZONTAL, threshold: 50 });
     
+    // Set a flag when a pan starts and ends.
     hammer.on('panstart', function() {
         isPanningCard = true;
     });
     
     hammer.on('panend', function(e) {
-        isPanningCard = false;
+        isPanningCard = false; // The pan is over.
         
         const deltaX = e.deltaX;
         const absoluteDeltaX = Math.abs(deltaX);
@@ -144,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
             cueLeft.style.opacity = 0;
         }
     });
-
+    
     function animateAndSubmit(hasSeen) {
         if (form.submitted) return;
         form.submitted = true;
@@ -157,6 +166,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => { form.submit(); }, swipeAnimationDuration + 50);
     }
     
+    // The other functions are correct and do not need changes
     function animateCounter() { /* ... */ }
 });
 </script>
