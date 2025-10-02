@@ -15,6 +15,7 @@ from .signals import milestone_reached
 
 
 def get_weighted_random_movie(unseen_movies):
+    # This function is correct and does not need changes
     tiers = {
         "tentpole": (300_000_000, None), "major": (75_000_000, 300_000_000),
         "mid": (10_000_000, 75_000_000), "low": (1_000_000, 10_000_000),
@@ -85,7 +86,7 @@ def next_movie_view(request):
         if params: redirect_url += '?' + '&'.join(params)
         return redirect(redirect_url)
 
-    # --- GET LOGIC WITH PERSONALIZED WEIGHTING ---
+    # --- GET LOGIC WITH SIMPLIFIED PERSONALIZED WEIGHTING ---
     viewed_movie_ids = UserMovieView.objects.filter(user=user).values_list('movie_id', flat=True)
     unseen_movies = Movie.objects.exclude(id__in=viewed_movie_ids).prefetch_related('directors', 'genre')
     
@@ -108,27 +109,24 @@ def next_movie_view(request):
     if seen_movie_count >= 250:
         seen_movies = Movie.objects.filter(id__in=UserMovieView.objects.filter(user=user, has_seen=True).values_list('movie_id', flat=True))
         
-        top_genre_ids = list(seen_movies.values_list('genre__id', flat=True).annotate(count=Count('genre__id')).order_by('-count')[:3])
-        top_director_ids = list(seen_movies.values_list('directors__id', flat=True).annotate(count=Count('directors__id')).order_by('-count')[:3])
+        # **MODIFICATION HERE**: Added filter for the 5-movie minimum.
+        # 1. Get a ranked list of all eligible directors by seen count.
+        all_ranked_director_ids = seen_movies.values_list('directors__id', flat=True) \
+            .annotate(count=Count('directors__id')) \
+            .filter(count__gte=5) \
+            .order_by('-count')
+
+        # 2. Get a set of all directors who have at least one unseen movie.
+        actionable_director_ids = set(unseen_movies.exclude(directors__isnull=True) \
+            .values_list('directors__id', flat=True).distinct())
         
-        ranked_seen_collections = seen_movies.exclude(collection_id__isnull=True) \
-            .exclude(collection_name="Nobody Collection") \
-            .values('collection_id') \
-            .annotate(total_revenue=Sum('revenue')) \
-            .order_by('-total_revenue') \
-            .values_list('collection_id', flat=True)
-
-        actionable_collections = set(unseen_movies.exclude(collection_id__isnull=True)
-            .exclude(collection_name="Nobody Collection") \
-            .values_list('collection_id', flat=True).distinct())
-
-        top_collection_ids = []
-        for collection_id in ranked_seen_collections:
-            if collection_id in actionable_collections:
-                top_collection_ids.append(collection_id)
-            if len(top_collection_ids) == 3:
+        # 3. Find the top 5 from the ranked list that are also actionable.
+        top_director_ids = []
+        for director_id in all_ranked_director_ids:
+            if director_id in actionable_director_ids:
+                top_director_ids.append(director_id)
+            if len(top_director_ids) == 5:
                 break
-        top_collection_ids = set(top_collection_ids)
         
         candidate_movies = unseen_movies.order_by('?')[:500]
         scored_movies = []
@@ -142,17 +140,10 @@ def next_movie_view(request):
             elif movie.revenue > 1_000_000: score += revenue_tiers['low']
             else: score += revenue_tiers['micro']
 
-            for genre in movie.genre.all():
-                if genre.id in top_genre_ids:
-                    score += 8
-
             for director in movie.directors.all():
                 if director.id in top_director_ids:
-                    score += 40
+                    score += 40 # Director match bonus
             
-            if movie.collection_id in top_collection_ids:
-                score += 100
-
             scored_movies.append({'movie': movie, 'score': score})
             
         if scored_movies:
@@ -184,6 +175,7 @@ def next_movie_view(request):
 
 @login_required
 def profile_view(request, username=None):
+    # ... (profile_view is unchanged) ...
     current_user = request.user
     
     if username:
