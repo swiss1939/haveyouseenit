@@ -3,31 +3,75 @@
 {% block content %}
 <div class="container my-5">
     <div class="row justify-content-center">
-        <div class="col-md-6">
+        <div class="col-md-7 col-lg-6">
             <div class="card shadow-lg p-4 rounded-3">
-                <h2 class="card-title text-center text-dark mb-4">Welcome Back!</h2>
+
+                <!-- STYLED INTRO SECTION (Unchanged) -->
+                <div class="text-center mb-4">
+                    <h2 class="fw-bolder text-primary text-uppercase">HAVE YOU SEEN IT?</h2>
+                    <p class="lead text-muted px-3 mt-3">
+                        A website to help you quickly build a library of every movie you've ever seen.
+                    </p>
+                </div>
+                <div class="text-center small p-3 my-3">
+                    <h6 class="fw-bold mb-3 border-bottom pb-2">How to Rate</h6>
+                    <div class="d-none d-md-flex justify-content-center align-items-center"><i class="bi bi-mouse fs-4 me-2"></i><span>Swipe Right for "Seen", Swipe Left for "Not Seen".</span></div>
+                    <div class="d-md-none d-flex justify-content-center align-items-center"><i class="bi bi-hand-index-thumb fs-4 me-2"></i><span>Tap the green side for "Seen", Tap the red side for "Not Seen".</span></div>
+                </div>
+                <hr class="my-4">
                 
-                <form method="post" class="d-flex flex-column align-items-center">
-                    {% csrf_token %}
-                    
-                    {% for field in form %}
-                        <div class="mb-3" style="width: 80%; max-width: 300px;"> 
-                            <label for="{{ field.id_for_label }}" class="form-label fw-bold">{{ field.label }}</label>
-                            {{ field }}
-                            {% for error in field.errors %}
-                                <div class="alert alert-danger p-1 mt-1 small">{{ error }}</div>
-                            {% endfor %}
+                <!-- *** NEW, CORRECTLY CENTERED TWO-COLUMN FORM *** -->
+                <div class="d-flex justify-content-center">
+                    <form id="login-form" method="post" style="width: 100%; max-width: 350px;">
+                        {% csrf_token %}
+                        
+                        <div class="row mb-3 align-items-center">
+                            <div class="col-4 text-end">
+                                <label for="{{ form.username.id_for_label }}" class="col-form-label fw-bold">{{ form.username.label }}</label>
+                            </div>
+                            <div class="col-8">
+                                {{ form.username }}
+                            </div>
                         </div>
-                    {% endfor %}
-                    
-                    <button type="submit" class="btn btn-success btn-lg mt-3" style="width: 80%; max-width: 300px;">Log In</button>
-                </form>
+
+                        <div class="row mb-4 align-items-center">
+                            <div class="col-4 text-end">
+                                <label for="{{ form.password.id_for_label }}" class="col-form-label fw-bold">{{ form.password.label }}</label>
+                            </div>
+                            <div class="col-8">
+                                {{ form.password }}
+                            </div>
+                        </div>
+                        
+                        {% for error in form.non_field_errors %}
+                            <div class="alert alert-danger p-2 mt-1 small text-center">{{ error }}</div>
+                        {% endfor %}
+                        
+                        <div class="text-center">
+                            <button id="login-button" type="submit" class="btn btn-success btn-lg mt-3 w-100">Log In</button>
+                        </div>
+                    </form>
+                </div>
                 
-                <p class="text-center mt-3">
+                <p class="text-center mt-4">
                     Don't have an account? <a href="{% url 'signup' %}" class="text-success fw-bold">Sign Up here</a>.
                 </p>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('login-form');
+    const loginButton = document.getElementById('login-button');
+
+    if (loginForm && loginButton) {
+        loginForm.addEventListener('submit', function() {
+            loginButton.disabled = true;
+            loginButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Logging In...';
+        });
+    }
+});
+</script>
 {% endblock content %}
