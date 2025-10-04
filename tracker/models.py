@@ -92,7 +92,10 @@ def generate_invite_code():
 class InviteCode(models.Model):
     code = models.CharField(max_length=8, unique=True, default=generate_invite_code)
     generated_by = models.ForeignKey(User, related_name='generated_codes', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # This relationship is now safe as SET_NULL because we no longer hard-delete users.
     used_by = models.OneToOneField(User, related_name='used_code', on_delete=models.SET_NULL, null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     used_at = models.DateTimeField(null=True, blank=True)
 

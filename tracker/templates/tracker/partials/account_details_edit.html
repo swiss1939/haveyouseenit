@@ -1,0 +1,40 @@
+<h4 class="mb-3 border-bottom pb-2">Edit Account Details</h4>
+
+<form id="account-details-form" novalidate>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label for="{{ form.first_name.id_for_label }}" class="form-label">{{ form.first_name.label }}</label>
+            {{ form.first_name }}
+            <div class="invalid-feedback">{{ form.first_name.errors.0 }}</div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="{{ form.last_name.id_for_label }}" class="form-label">{{ form.last_name.label }}</label>
+            {{ form.last_name }}
+            <div class="invalid-feedback">{{ form.last_name.errors.0 }}</div>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
+        {{ form.email }}
+        <div class="invalid-feedback">{{ form.email.errors.0 }}</div>
+    </div>
+
+    <div class="mt-4">
+        <button type="submit" class="btn btn-success">Save Changes</button>
+        <button type="button" id="cancel-edit-btn" class="btn btn-secondary">Cancel</button>
+    </div>
+</form>
+
+<hr class="my-4">
+
+<div class="p-3 border border-danger rounded-3">
+    <h4 class="text-danger">Danger Zone</h4>
+    <p class="small text-muted">
+        Disabling your account will hide your profile and remove you from friends' lists.
+        Your movie ratings will be preserved. You can reactivate your account at any time by signing up again with the same email address.
+    </p>
+    <form action="{% url 'delete_account' %}" method="post" onsubmit="return confirm('Are you sure you want to disable your account?');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Disable My Account</button>
+    </form>
+</div>
