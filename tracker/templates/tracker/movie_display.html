@@ -13,19 +13,32 @@
         </div>
     </div>
     {% else %}
-    <div class="d-flex justify-content-center position-relative" style="max-width: 1000px; margin: 0 auto;">
+    <!-- MOBILE-ONLY: Window-wide gradient overlays, positioned below the navbar -->
+    <div class="d-block d-md-none">
+        <div id="window-overlay-left" style="position: fixed; left: 0; width: 25vw; z-index: 1; pointer-events: none; background: linear-gradient(to right, rgba(200, 40, 40, 0.6) 0%, rgba(200, 40, 40, 0) 100%);"></div>
+        <div id="window-overlay-right" style="position: fixed; right: 0; width: 25vw; z-index: 1; pointer-events: none; background: linear-gradient(to left, rgba(40, 200, 40, 0.6) 0%, rgba(40, 200, 40, 0) 100%);"></div>
+    </div>
 
-        <div id="swipe-cue-left" class="position-absolute d-flex align-items-center justify-content-center rounded-3 shadow-sm"
+    <div class="d-flex justify-content-center position-relative" style="max-width: 1000px; margin: 0 auto; z-index: 2;">
+
+        <!-- DESKTOP-ONLY: Swipe Cues (Unchanged) -->
+        <div id="swipe-cue-left" class="position-absolute d-none d-md-flex align-items-center justify-content-center rounded-3 shadow-sm"
              style="width: 20vw; min-width: 100px; max-width: 250px; top: 0; left: 0; transform: translateX(calc(-100% + 5px)); height: 100%; z-index: -1; background: linear-gradient(to right, rgba(248, 249, 250, 0) 0%, rgba(200, 40, 40, 0.7) 100%); color: #1a1a1a; font-size: 2em; font-weight: bold; text-shadow: 0 0 5px rgba(0, 0, 0, 0.5); opacity: 0; transition: opacity 0.3s ease; pointer-events: none;">
             NO
         </div>
 
-        <div id="swipe-cue-right" class="position-absolute d-flex align-items-center justify-content-center rounded-3 shadow-sm"
+        <div id="swipe-cue-right" class="position-absolute d-none d-md-flex align-items-center justify-content-center rounded-3 shadow-sm"
              style="width: 20vw; min-width: 100px; max-width: 250px; top: 0; right: 0; transform: translateX(calc(100% - 5px)); height: 100%; z-index: -1; background: linear-gradient(to left, rgba(248, 249, 250, 0) 0%, rgba(40, 200, 40, 0.7) 100%); color: #1a1a1a; font-size: 2em; font-weight: bold; text-shadow: 0 0 5px rgba(0, 0, 0, 0.5); opacity: 0; transition: opacity 0.3s ease; pointer-events: none;">
             YES
         </div>
         
         <div id="movie-card" class="row shadow-lg bg-white p-4" style="max-width: 800px; border-radius: 20px; position: relative; user-select: none; -webkit-user-drag: none;">
+            
+            <!-- MOBILE-ONLY: Touch zones (no visuals, just for interaction) -->
+            <div class="d-block d-md-none">
+                <div id="touch-zone-left" style="position: absolute; top: 0; left: 0; width: 25%; height: 100%; z-index: 11; border-top-left-radius: 20px; border-bottom-left-radius: 20px;"></div>
+                <div id="touch-zone-right" style="position: absolute; top: 0; right: 0; width: 25%; height: 100%; z-index: 11; border-top-right-radius: 20px; border-bottom-right-radius: 20px;"></div>
+            </div>
             
             <div class="col-md-4 mb-3 mb-md-0">
                 {% if movie.poster_url %}
@@ -72,88 +85,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const form = document.getElementById('swipe-form');
     const hasSeenInput = document.getElementById('has-seen-input');
-    const cueLeft = document.getElementById('swipe-cue-left');
-    const cueRight = document.getElementById('swipe-cue-right');
-    const velocityThreshold = 0.5;
-    const dragThreshold = 150;
     const swipeAnimationDuration = 400;
     const offScreenDistance = 1500;
     
-    // --- THIS IS THE NEW, SIMPLIFIED FIX ---
-    let isPanningCard = false;
-
-    function resetCardStyles() {
-        // This is the normal, slower snap-back for a failed swipe.
-        card.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
-        card.style.transform = '';
-        card.style.opacity = 1;
-        hideCues();
-    }
-
-    // This listener detects when the browser's scroll action takes over.
-    window.addEventListener('scroll', () => {
-        // If a scroll happens WHILE we are panning the card...
-        if (isPanningCard) {
-            // ...instantly remove the slow transition property.
-            card.style.transition = 'none';
-            // Then, in the next "frame", apply a fast transition and snap back.
-            requestAnimationFrame(() => {
-                // This is the "happy medium" speed. It's fast but not instant.
-                card.style.transition = 'transform 0.1s ease-out';
-                card.style.transform = '';
-                hideCues();
-            });
-            isPanningCard = false; // Reset the flag
-        }
-    }, { passive: true });
-    // --- END OF FIX ---
-
-    function hideCues() {
-        cueLeft.style.opacity = 0;
-        cueRight.style.opacity = 0;
-    }
-    
-    card.addEventListener('mouseenter', function() { cueLeft.style.opacity = 0.5; cueRight.style.opacity = 0.5; });
-    card.addEventListener('mouseleave', hideCues);
-
-    const hammer = new Hammer(card);
-    hammer.get('pan').set({ direction: Hammer.DIRECTION_HORIZONTAL, threshold: 10 });
-    hammer.get('swipe').set({ direction: Hammer.DIRECTION_HORIZONTAL, threshold: 50 });
-    
-    // Set a flag when a pan starts and ends.
-    hammer.on('panstart', function() {
-        isPanningCard = true;
-    });
-    
-    hammer.on('panend', function(e) {
-        isPanningCard = false; // The pan is over.
-        
-        const deltaX = e.deltaX;
-        const absoluteDeltaX = Math.abs(deltaX);
-
-        if (absoluteDeltaX > dragThreshold) {
-            animateAndSubmit(deltaX > 0);
-        } else if (Math.abs(e.velocityX) < velocityThreshold) {
-            resetCardStyles();
-        }
-    });
-
-    hammer.on('pan', function(e) {
-        card.style.transform = `translateX(${e.deltaX}px) rotate(${e.deltaX / 50}deg)`;
-        card.style.transition = 'none';
-        
-        const maxDrag = 150;
-        const opacity = Math.min(Math.abs(e.deltaX) / maxDrag, 1);
-        
-        if (e.deltaX < 0) {
-            cueLeft.style.opacity = opacity;
-            cueRight.style.opacity = 0;
-        } else {
-            cueRight.style.opacity = opacity;
-            cueLeft.style.opacity = 0;
-        }
-    });
-    
+    // --- SHARED FUNCTION ---
     function animateAndSubmit(hasSeen) {
         if (form.submitted) return;
         form.submitted = true;
@@ -166,8 +101,114 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => { form.submit(); }, swipeAnimationDuration + 50);
     }
     
-    // The other functions are correct and do not need changes
     function animateCounter() { /* ... */ }
+
+    // --- LOGIC SEPARATION ---
+    if (window.matchMedia("(max-width: 767.98px)").matches) {
+        // --- MOBILE: TOUCH-TO-RATE LOGIC ---
+        const touchZoneLeft = document.getElementById('touch-zone-left');
+        const touchZoneRight = document.getElementById('touch-zone-right');
+        
+        touchZoneLeft.addEventListener('click', () => animateAndSubmit(false));
+        touchZoneRight.addEventListener('click', () => animateAndSubmit(true));
+
+        // --- NEW: Position overlays below the header ---
+        const navbar = document.querySelector('.navbar');
+        const overlayLeft = document.getElementById('window-overlay-left');
+        const overlayRight = document.getElementById('window-overlay-right');
+
+        function positionOverlays() {
+            if (navbar && overlayLeft && overlayRight) {
+                const navbarHeight = navbar.offsetHeight;
+                overlayLeft.style.top = `${navbarHeight}px`;
+                overlayRight.style.top = `${navbarHeight}px`;
+                // Adjust height to fill remaining viewport
+                overlayLeft.style.height = `calc(100vh - ${navbarHeight}px)`;
+                overlayRight.style.height = `calc(100vh - ${navbarHeight}px)`;
+            }
+        }
+
+        // Position them on initial load
+        positionOverlays();
+        // Reposition them if the window is resized
+        window.addEventListener('resize', positionOverlays);
+        
+        // Reposition if the navbar collapse state changes (a Bootstrap event)
+        const navCollapse = document.getElementById('navbarNav');
+        if (navCollapse) {
+            navCollapse.addEventListener('shown.bs.collapse', positionOverlays);
+            navCollapse.addEventListener('hidden.bs.collapse', positionOverlays);
+        }
+
+    } else {
+        // --- DESKTOP: SWIPE-TO-RATE LOGIC (Hammer.js) ---
+        const cueLeft = document.getElementById('swipe-cue-left');
+        const cueRight = document.getElementById('swipe-cue-right');
+        const velocityThreshold = 0.5;
+        const dragThreshold = 150;
+        let isPanningCard = false;
+
+        function resetCardStyles() {
+            card.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+            card.style.transform = '';
+            card.style.opacity = 1;
+            hideCues();
+        }
+
+        window.addEventListener('scroll', () => {
+            if (isPanningCard) {
+                card.style.transition = 'none';
+                requestAnimationFrame(() => {
+                    card.style.transition = 'transform 0.1s ease-out';
+                    card.style.transform = '';
+                    hideCues();
+                });
+                isPanningCard = false;
+            }
+        }, { passive: true });
+
+        function hideCues() {
+            cueLeft.style.opacity = 0;
+            cueRight.style.opacity = 0;
+        }
+        
+        card.addEventListener('mouseenter', function() { cueLeft.style.opacity = 0.5; cueRight.style.opacity = 0.5; });
+        card.addEventListener('mouseleave', hideCues);
+
+        const hammer = new Hammer(card);
+        hammer.get('pan').set({ direction: Hammer.DIRECTION_HORIZONTAL, threshold: 10 });
+        hammer.get('swipe').set({ direction: Hammer.DIRECTION_HORIZONTAL, threshold: 50 });
+        
+        hammer.on('panstart', function() { isPanningCard = true; });
+        
+        hammer.on('panend', function(e) {
+            isPanningCard = false;
+            const deltaX = e.deltaX;
+            const absoluteDeltaX = Math.abs(deltaX);
+
+            if (absoluteDeltaX > dragThreshold) {
+                animateAndSubmit(deltaX > 0);
+            } else if (Math.abs(e.velocityX) < velocityThreshold) {
+                resetCardStyles();
+            }
+        });
+
+        hammer.on('pan', function(e) {
+            card.style.transform = `translateX(${e.deltaX}px) rotate(${e.deltaX / 50}deg)`;
+            card.style.transition = 'none';
+            
+            const maxDrag = 150;
+            const opacity = Math.min(Math.abs(e.deltaX) / maxDrag, 1);
+            
+            if (e.deltaX < 0) {
+                cueLeft.style.opacity = opacity;
+                cueRight.style.opacity = 0;
+            } else {
+                cueRight.style.opacity = opacity;
+                cueLeft.style.opacity = 0;
+            }
+        });
+    }
 });
 </script>
 {% endblock content %}
