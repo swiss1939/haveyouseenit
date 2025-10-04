@@ -87,9 +87,48 @@ def profile_view(request, username=None):
     profile_owner = get_object_or_404(User, username=username) if username else current_user
     is_self = (current_user == profile_owner)
 
-    if request.method == 'POST' and is_self:
-        # POST logic for friend management remains unchanged
-        return redirect(request.POST.get('next_url', reverse('my_profile')))
+    # --- *** THIS ENTIRE BLOCK OF CODE IS THE FIX *** ---
+    # It restores the logic to handle all friend request actions.
+    if request.method == 'POST':
+        next_url = request.POST.get('next_url', reverse('my_profile'))
+
+        if 'accept_request' in request.POST:
+            request_id = request.POST.get('request_id')
+            friend_request = get_object_or_404(Friendship, id=request_id, to_user=current_user)
+            
+            with transaction.atomic():
+                friend_request.status = Friendship.Status.ACCEPTED
+                friend_request.accepted_at = timezone.now()
+                friend_request.save()
+                Friendship.objects.update_or_create(
+                    from_user=current_user, 
+                    to_user=friend_request.from_user,
+                    defaults={'status': Friendship.Status.ACCEPTED, 'accepted_at': timezone.now()}
+                )
+            return redirect(next_url)
+
+        elif 'decline_request' in request.POST:
+            request_id = request.POST.get('request_id')
+            friend_request = get_object_or_404(Friendship, id=request_id, to_user=current_user)
+            friend_request.delete()
+            return redirect(next_url)
+        
+        elif 'cancel_request' in request.POST:
+            request_id = request.POST.get('request_id')
+            friend_request = get_object_or_404(Friendship, id=request_id, from_user=current_user)
+            friend_request.delete()
+            return redirect(next_url)
+
+        elif 'remove_friend' in request.POST:
+            friend_id_to_remove = request.POST.get('remove_friend_id')
+            if friend_id_to_remove:
+                friend_to_remove = get_object_or_404(User, id=friend_id_to_remove)
+                Friendship.objects.filter(
+                    (Q(from_user=current_user) & Q(to_user=friend_to_remove)) |
+                    (Q(from_user=friend_to_remove) & Q(to_user=current_user))
+                ).delete()
+            return redirect(next_url)
+    # --- *** END OF RESTORED CODE BLOCK *** ---
 
     # --- GET request context building ---
     context = {
