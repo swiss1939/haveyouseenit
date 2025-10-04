@@ -26,7 +26,7 @@
         <div class="col-lg-10 col-md-12">
             <div class="card shadow-lg p-4 rounded-3">
                 
-                <h2 class="card-title text-center mb-4 fw-bold text-primary">{% if is_self %}Your Profile{% else %}{{ profile_owner.username }}'s Profile{% endif %}</h2>
+                <h2 class="card-title text-center mb-4 fw-bold text-primary">{% if is_self %}Your Profile{% elif friendship_status == 'FRIENDS' %}{{ profile_owner.first_name }} {{ profile_owner.last_name }}'s Profile{% else %}{{ profile_owner.username }}'s Profile{% endif %}</h2>
 
                 <div class="row justify-content-center text-center mb-4">
                     <div class="col-md-6 mb-3"><div class="p-3 rounded-3 shadow-sm" style="background-color: #f0f0f0;"><h5 class="text-uppercase text-muted small fw-bolder">MOVIES SEEN</h5><p id="total-seen-movies-stat" class="text-success" style="font-size: 5rem; font-weight: 900; line-height: 1;">{{ total_seen_movies }}</p></div></div>
@@ -44,7 +44,7 @@
                 {% if is_self or friendship_status == 'FRIENDS' %}
                     <hr class="my-4">
                     <div class="mt-2">
-                        <h3 class="mb-3 text-center">{% if is_self %}Your{% else %}{{ profile_owner.username }}'s{% endif %} Seen Movies Library</h3>
+                        <h3 class="mb-3 text-center">{% if is_self %}Your{% else %}{{ profile_owner.first_name }} {{profile_owner.last_name }}'s{% endif %} Seen Movies Library</h3>
                         <div id="seen-movies-container" class="mb-3">{% include 'tracker/partials/seen_movies_grid.html' %}</div>
                         <div class="d-flex justify-content-between align-items-center" id="seen-movies-pagination-controls">
                             <button id="seen-prev-page" class="btn btn-sm btn-outline-secondary" disabled>Previous</button>
