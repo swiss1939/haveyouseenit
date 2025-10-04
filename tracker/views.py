@@ -19,9 +19,7 @@ from django.http import JsonResponse, HttpResponseBadRequest
 from django.template.loader import render_to_string
 
 
-# get_weighted_random_movie, SignUpView, next_movie_view remain unchanged...
 def get_weighted_random_movie(unseen_movies):
-    # (No changes to this function)
     tiers = { "tentpole": (300_000_000, None), "major": (75_000_000, 300_000_000), "mid": (10_000_000, 75_000_000), "low": (1_000_000, 10_000_000), "micro": (None, 1_000_000), }
     tier_weights = {"tentpole": 45, "major": 30, "mid": 15, "low": 7, "micro": 3}
     if not unseen_movies.exists(): return None
@@ -33,7 +31,6 @@ def get_weighted_random_movie(unseen_movies):
     return movie_query.order_by('?').first()
 
 class SignUpView(CreateView):
-    # (No changes to this class)
     form_class = CustomUserCreationForm
     success_url = reverse_lazy('login')
     template_name = 'registration/signup.html'
@@ -45,7 +42,6 @@ class SignUpView(CreateView):
 
 @login_required
 def next_movie_view(request):
-    # (No changes to this function)
     user = request.user
     if request.method == 'POST':
         movie_id = request.POST.get('movie_id')
@@ -87,35 +83,42 @@ def profile_view(request, username=None):
     profile_owner = get_object_or_404(User, username=username) if username else current_user
     is_self = (current_user == profile_owner)
 
-    # POST logic for friend requests is correct and remains unchanged...
     if request.method == 'POST':
-        # ... (accept, decline, cancel, remove friend logic)
         next_url = request.POST.get('next_url', reverse('my_profile'))
         if 'accept_request' in request.POST:
-            request_id = request.POST.get('request_id')
-            friend_request = get_object_or_404(Friendship, id=request_id, to_user=current_user)
+            request_id = request.POST.get('request_id'); friend_request = get_object_or_404(Friendship, id=request_id, to_user=current_user)
             with transaction.atomic():
                 friend_request.status = Friendship.Status.ACCEPTED; friend_request.accepted_at = timezone.now(); friend_request.save()
                 Friendship.objects.update_or_create(from_user=current_user, to_user=friend_request.from_user, defaults={'status': Friendship.Status.ACCEPTED, 'accepted_at': timezone.now()})
             return redirect(next_url)
-        # ... (etc. for other POST actions)
-        return redirect(next_url)
+        elif 'decline_request' in request.POST:
+            request_id = request.POST.get('request_id'); friend_request = get_object_or_404(Friendship, id=request_id, to_user=current_user); friend_request.delete()
+            return redirect(next_url)
+        elif 'cancel_request' in request.POST:
+            request_id = request.POST.get('request_id'); friend_request = get_object_or_404(Friendship, id=request_id, from_user=current_user); friend_request.delete()
+            return redirect(next_url)
+        elif 'remove_friend' in request.POST:
+            friend_id_to_remove = request.POST.get('remove_friend_id')
+            if friend_id_to_remove:
+                friend_to_remove = get_object_or_404(User, id=friend_id_to_remove)
+                Friendship.objects.filter((Q(from_user=current_user) & Q(to_user=friend_to_remove)) | (Q(from_user=friend_to_remove) & Q(to_user=current_user))).delete()
+            return redirect(next_url)
+        # Add friend from other's profile
+        elif 'add_friend' in request.POST:
+            user_id = request.POST.get('user_id')
+            to_user = get_object_or_404(User, id=user_id)
+            Friendship.objects.get_or_create(from_user=current_user, to_user=to_user)
+            return redirect(next_url)
 
-
-    # --- GET request context building ---
     context = {
-        'profile_owner': profile_owner,
-        'profile': profile_owner.profile,
-        'is_self': is_self,
+        'profile_owner': profile_owner, 'profile': profile_owner.profile, 'is_self': is_self,
         'total_seen_movies': UserMovieView.objects.filter(user=profile_owner, has_seen=True).count(),
-        'friendship_status': None, # Default to None
+        'friendship_status': None,
     }
 
-    # Determine friendship status if viewing another profile
     if not is_self:
         if Friendship.objects.filter(from_user=current_user, to_user=profile_owner, status='ACCEPTED').exists():
             context['friendship_status'] = 'FRIENDS'
-        # ... (rest of friendship status logic is unchanged)
         else:
             received_request = Friendship.objects.filter(from_user=profile_owner, to_user=current_user, status='PENDING').first()
             if received_request:
@@ -125,18 +128,14 @@ def profile_view(request, username=None):
             else:
                 context['friendship_status'] = 'NOT_FRIENDS'
 
-    # --- THIS IS THE FIX ---
-    # Show "Total Rated" stat if it's your own profile OR you are friends
     if is_self or context['friendship_status'] == 'FRIENDS' or context['friendship_status'] == 'REQUEST_RECEIVED':
         context['total_rated_movies'] = UserMovieView.objects.filter(user=profile_owner).count()
 
-    # Show "Seen Movies" list if it's your own profile OR you are friends
     if is_self or context['friendship_status'] == 'FRIENDS':
         seen_movies_query = UserMovieView.objects.filter(user=profile_owner, has_seen=True).select_related('movie').order_by('-date_recorded')
         context['seen_movies_list'] = seen_movies_query[:12]
         context['total_seen_for_paging'] = seen_movies_query.count()
 
-    # "My Profile" specific content (friends lists, invites, etc.)
     if is_self:
         last_rated = UserMovieView.objects.filter(user=current_user).select_related('movie').order_by('-date_recorded')
         context['last_rated_movies'] = last_rated[:10]
@@ -149,66 +148,44 @@ def profile_view(request, username=None):
             'sent_requests': Friendship.objects.filter(from_user=current_user, status='PENDING').select_related('to_user'),
             'invited_friend_ids': invited_friend_ids,
         })
-
     return render(request, 'tracker/profile_dashboard.html', context)
 
-# --- VIEW FOR SEEN MOVIES AJAX PAGINATION ---
+# --- THIS FUNCTION IS THE FIX ---
 @login_required
-def get_seen_movies_page(request, page):
+def get_seen_movies_page(request, username, page):
     page_size = 12
     start_index = (page - 1) * page_size
     end_index = start_index + page_size
-    seen_movies = UserMovieView.objects.filter(user=request.user, has_seen=True).select_related('movie').order_by('-date_recorded')[start_index:end_index]
+    user_to_fetch = get_object_or_404(User, username=username)
+    is_self = request.user == user_to_fetch
+    is_friend = Friendship.objects.filter(from_user=request.user, to_user=user_to_fetch, status='ACCEPTED').exists()
+    if not (is_self or is_friend):
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    seen_movies = UserMovieView.objects.filter(user=user_to_fetch, has_seen=True).select_related('movie').order_by('-date_recorded')[start_index:end_index]
     html = render_to_string('tracker/partials/seen_movies_grid.html', {'seen_movies_list': seen_movies})
     return JsonResponse({'html': html})
 
-# --- UPDATED VIEW FOR MOVIE DETAIL PAGE ---
 @login_required
 def movie_detail_view(request, movie_id):
-    """
-    Displays the details for a single movie, separating crew and cast for the template.
-    """
-    movie = get_object_or_404(
-        Movie.objects.prefetch_related('directors', 'producers', 'cinematographers', 'genre'), 
-        id=movie_id
-    )
-    
-    # --- NEW: Create a separate list for crew members ---
+    movie = get_object_or_404(Movie.objects.prefetch_related('directors', 'producers', 'cinematographers', 'genre'), id=movie_id)
     crew = []
-    for director in movie.directors.all():
-        crew.append({'role': 'Director', 'name': director.name})
-    for producer in movie.producers.all():
-        crew.append({'role': 'Producer', 'name': producer.name})
-    for cine in movie.cinematographers.all():
-        crew.append({'role': 'Cinematography', 'name': cine.name})
-
-    # Fetch the top-billed cast separately
+    for director in movie.directors.all(): crew.append({'role': 'Director', 'name': director.name})
+    for producer in movie.producers.all(): crew.append({'role': 'Producer', 'name': producer.name})
+    for cine in movie.cinematographers.all(): crew.append({'role': 'Cinematography', 'name': cine.name})
     top_cast = MovieCastCredit.objects.filter(movie=movie).select_related('actor').order_by('order')[:10]
-
-    context = {
-        'movie': movie,
-        'crew': crew,
-        'cast': top_cast,
-    }
+    context = {'movie': movie, 'crew': crew, 'cast': top_cast}
     return render(request, 'tracker/movie_detail.html', context)
 
-
-# --- VIEW FOR LAST RATED AJAX PAGINATION (UPDATED) ---
 @login_required
 def get_last_rated_page(request, page):
-    page_size = 10 # Changed from 5 to 10
+    page_size = 10
     start_index = (page - 1) * page_size
     end_index = start_index + page_size
-
-    if start_index >= 20:
-        return JsonResponse({'html': ''})
-
+    if start_index >= 20: return JsonResponse({'html': ''})
     last_rated = UserMovieView.objects.filter(user=request.user).select_related('movie').order_by('-date_recorded')[start_index:end_index]
-    
     html = render_to_string('tracker/partials/last_rated_list.html', {'last_rated_movies': last_rated})
     return JsonResponse({'html': html})
 
-# --- VIEW FOR AJAX RATING UPDATE ---
 @login_required
 def update_rating(request):
     if request.method == 'POST':
