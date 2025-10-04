@@ -5,8 +5,33 @@
     <div class="row justify-content-center">
         <div class="col-md-6">
             <div class="card shadow-lg p-4 rounded-3">
-                <h2 class="card-title text-center text-primary mb-4">Create Your Account</h2>
-                <form method="post">
+
+                <!-- STYLED INTRO SECTION -->
+                <div class="text-center mb-4">
+                    <h2 class="fw-bolder text-primary text-uppercase">HAVE YOU SEEN IT?</h2>
+                    <p class="lead text-muted px-3 mt-3">
+                        A website to help you quickly build a library of every movie you've ever seen.
+                    </p>
+                </div>
+
+                <div class="text-center small p-3 my-3">
+                    <h6 class="fw-bold mb-3 border-bottom pb-2">How to Rate</h6>
+                    <div class="d-none d-md-flex justify-content-center align-items-center">
+                        <i class="bi bi-mouse fs-4 me-2"></i>
+                        <span>Swipe Right for "Seen", Swipe Left for "Not Seen".</span>
+                    </div>
+                    <div class="d-md-none d-flex justify-content-center align-items-center">
+                        <i class="bi bi-hand-index-thumb fs-4 me-2"></i>
+                        <span>Tap the green side for "Seen", Tap the red side for "Not Seen".</span>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <h4 class="text-center mb-4">Create Your Account</h4>
+
+                <!-- *** ADDED ID TO FORM *** -->
+                <form id="signup-form" method="post">
                     {% csrf_token %}
                     
                     {% for field in form %}
@@ -22,10 +47,26 @@
                         </div>
                     {% endfor %}
                     
-                    <button type="submit" class="btn btn-success btn-lg w-100 mt-3">Register</button>
+                    <!-- *** ADDED ID TO BUTTON *** -->
+                    <button id="signup-button" type="submit" class="btn btn-success btn-lg w-100 mt-3">Register</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<!-- *** ADDED SCRIPT FOR ERR_CACHE_MISS FIX *** -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const signupForm = document.getElementById('signup-form');
+    const signupButton = document.getElementById('signup-button');
+
+    if (signupForm && signupButton) {
+        signupForm.addEventListener('submit', function() {
+            signupButton.disabled = true;
+            signupButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Registering...';
+        });
+    }
+});
+</script>
 {% endblock content %}
