@@ -1,20 +1,32 @@
-<ul class="list-group list-group-flush">
-    {% for view in last_rated_movies %}
-    <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap flex-nowrap">
-        <!-- UPDATED: Container for title truncation -->
-        <div class="me-2 text-truncate-container">
-            <strong class="text-truncate-line" title="{{ view.movie.title }}">{{ view.movie.title }}</strong>
-        </div>
-        <button 
-            class="btn btn-sm rating-toggle {% if view.has_seen %}btn-success{% else %}btn-warning text-dark{% endif %}" 
-            data-view-id="{{ view.id }}" 
-            data-current-status="{{ view.has_seen|lower }}"
-            data-status-text="{% if view.has_seen %}Seen{% else %}Unseen{% endif %}"
-            data-action-text="{% if view.has_seen %}Mark as Unseen{% else %}Mark as Seen{% endif %}">
-            {% if view.has_seen %}Seen{% else %}Unseen{% endif %}
-        </button>
-    </li>
-    {% empty %}
-    <li class="list-group-item text-muted">You haven't rated any movies yet.</li>
-    {% endfor %}
-</ul>
+<div class="table-responsive">
+    <table class="table table-striped table-sm small">
+        <thead>
+            <tr>
+                <th>Movie</th>
+                <th class="text-center">Seen?</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for view in last_rated_movies %}
+            <tr>
+                <td>
+                    <strong title="{{ view.movie.title }}">{{ view.movie.title }}</strong>
+                </td>
+                <td class="text-center">
+                    <div class="form-check d-flex justify-content-center">
+                        <input 
+                            class="form-check-input rating-toggle" 
+                            type="checkbox" 
+                            data-view-id="{{ view.id }}" 
+                            {% if view.has_seen %}checked{% endif %}>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="2" class="text-center text-muted">You haven't rated any movies yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
