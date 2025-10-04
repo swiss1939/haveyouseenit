@@ -12,7 +12,7 @@ from django.db import transaction, IntegrityError
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.postgres.search import TrigramSimilarity
-from .models import Movie, UserMovieView, Profile, Genre, InviteCode, Friendship
+from .models import Movie, UserMovieView, Profile, Genre, InviteCode, Friendship, MovieCastCredit
 from .forms import CustomUserCreationForm
 from .signals import milestone_reached
 from django.http import JsonResponse, HttpResponseBadRequest
@@ -141,10 +141,36 @@ def get_seen_movies_page(request, page):
     html = render_to_string('tracker/partials/seen_movies_grid.html', {'seen_movies_list': seen_movies})
     return JsonResponse({'html': html})
 
-# --- PLACEHOLDER VIEW FOR MOVIE DETAIL PAGE ---
+# --- UPDATED VIEW FOR MOVIE DETAIL PAGE ---
 @login_required
 def movie_detail_view(request, movie_id):
-    return redirect('my_profile')
+    """
+    Displays the details for a single movie, separating crew and cast for the template.
+    """
+    movie = get_object_or_404(
+        Movie.objects.prefetch_related('directors', 'producers', 'cinematographers', 'genre'), 
+        id=movie_id
+    )
+    
+    # --- NEW: Create a separate list for crew members ---
+    crew = []
+    for director in movie.directors.all():
+        crew.append({'role': 'Director', 'name': director.name})
+    for producer in movie.producers.all():
+        crew.append({'role': 'Producer', 'name': producer.name})
+    for cine in movie.cinematographers.all():
+        crew.append({'role': 'Cinematography', 'name': cine.name})
+
+    # Fetch the top-billed cast separately
+    top_cast = MovieCastCredit.objects.filter(movie=movie).select_related('actor').order_by('order')[:10]
+
+    context = {
+        'movie': movie,
+        'crew': crew,
+        'cast': top_cast,
+    }
+    return render(request, 'tracker/movie_detail.html', context)
+
 
 # --- VIEW FOR LAST RATED AJAX PAGINATION (UPDATED) ---
 @login_required
