@@ -1,189 +1,243 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+    .poster-grid-item { transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
+    .poster-grid-item:hover { transform: scale(1.05); box-shadow: 0 8px 25px rgba(0,0,0,0.15); z-index: 10; }
+    .poster-img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 8px; }
+    .rating-toggle {
+        min-width: 120px;
+        transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, color 0.2s ease-in-out;
+    }
+</style>
+
 <div class="container my-5">
     <div class="row justify-content-center">
-        <div class="col-lg-8 col-md-10">
+        <div class="col-lg-10 col-md-12">
             <div class="card shadow-lg p-4 rounded-3">
                 
-                <h2 class="card-title text-center mb-4 fw-bold text-primary">
-                    {% if is_self %}Your Profile{% else %}{{ profile_owner.username }}'s Profile{% endif %}
-                </h2>
+                <h2 class="card-title text-center mb-4 fw-bold text-primary">{% if is_self %}Your Profile{% else %}{{ profile_owner.username }}'s Profile{% endif %}</h2>
 
+                <!-- STATS ROW -->
                 <div class="row justify-content-center text-center mb-4">
                     <div class="col-md-6 mb-3">
                         <div class="p-3 rounded-3 shadow-sm" style="background-color: #f0f0f0;">
                             <h5 class="text-uppercase text-muted small fw-bolder">MOVIES SEEN</h5>
-                            <p class="text-success" style="font-size: 5rem; font-weight: 900; line-height: 1;">
-                                {{ total_seen_movies }}
-                            </p>
+                            <p id="total-seen-movies-stat" class="text-success" style="font-size: 5rem; font-weight: 900; line-height: 1;">{{ total_seen_movies }}</p>
                         </div>
                     </div>
-                    
-                    {% if is_self or friendship_status == 'FRIENDS' or friendship_status == 'REQUEST_RECEIVED' %}
                     <div class="col-md-6 mb-3">
                         <div class="p-3 rounded-3 shadow-sm" style="background-color: #f0f0f0;">
                             <h5 class="text-uppercase text-muted small fw-bolder">MOVIES RATED</h5>
-                            <p class="text-primary" style="font-size: 5rem; font-weight: 900; line-height: 1;">
-                                {{ total_rated_movies }}
-                            </p>
+                            <p class="text-primary" style="font-size: 5rem; font-weight: 900; line-height: 1;">{{ total_rated_movies }}</p>
                         </div>
                     </div>
-                    {% endif %}
                 </div>
 
-                {% if not is_self %}
-                    <div class="text-center mb-4">
-                
-                        {% if friendship_status == 'REQUEST_RECEIVED' %}
-                            <p class="text-muted">{{ profile_owner.username }} has sent you a friend request.</p>
-                            <form method="post" action="{% url 'profile_dashboard' username=profile_owner.username %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="request_id" value="{{ request_obj.id }}">
-                                <input type="hidden" name="next_url" value="{{ request.path }}">
-                                <button type="submit" name="accept_request" class="btn btn-success">Accept Request</button>
-                                <button type="submit" name="decline_request" class="btn btn-danger ms-1">Decline</button>
-                            </form>
-                        
-                        {% elif friendship_status == 'REQUEST_SENT' %}
-                            <button class="btn btn-secondary" disabled>Friend Request Sent</button>
-                        
-                        {% elif friendship_status == 'NOT_FRIENDS' %}
-                            <form method="post" action="{% url 'profile_dashboard' username=profile_owner.username %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="user_id" value="{{ profile_owner.id }}">
-                                <input type="hidden" name="next_url" value="{{ request.path }}">
-                                <button type="submit" name="add_friend" class="btn btn-info">Add Friend</button>
-                            </form>
-                        {% endif %}
-                
-                    </div>
-                {% endif %}
-
                 {% if is_self %}
-                    <hr class="mt-2 mb-4">
-                    <h4 class="mb-3 border-bottom pb-2">Account Details</h4>
-                    <div class="row small text-muted mb-4">
-                        <div class="col-sm-6 mb-2"><strong>Email:</strong> {{ user.email }}</div>
-                        <div class="col-sm-6 mb-2"><strong>Date of Birth:</strong> {{ profile.date_of_birth }}</div>
-                        <div class="col-sm-6 mb-2"><strong>Joined:</strong> {{ profile.join_date|date:"F j, Y" }}</div>
-                        <div class="col-sm-6 mb-2"><strong>Last Activity:</strong> {{ profile.last_activity|timesince }} ago</div>
-                    </div>
-                    
-                    <h4 class="mb-3 border-bottom pb-2">Friends & Invites</h4>
-                    <div class="row">
-                        <div class="col-md-6">
-                            {% if incoming_requests %}
-                                <h5 class="mt-2">Incoming Requests ({{ incoming_requests.count }})</h5>
-                                <div class="list-group mb-4">
-                                    {% for friend_req in incoming_requests %}
-                                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <a href="{% url 'profile_dashboard' username=friend_req.from_user.username %}" class="fw-bold text-decoration-none">
-                                                    {{ friend_req.from_user.username }}
-                                                </a>
-                                            </div>
-                                            <form method="post" action="{% url 'my_profile' %}">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="request_id" value="{{ friend_req.id }}">
-                                                <input type="hidden" name="next_url" value="{{ request.path }}">
-                                                <button type="submit" name="accept_request" class="btn btn-sm btn-success">Accept</button>
-                                                <button type="submit" name="decline_request" class="btn btn-sm btn-danger ms-1">Decline</button>
-                                            </form>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
+                    <hr class="my-4">
 
-                            {% if sent_requests %}
-                                <h5 class="mt-2">Sent Requests ({{ sent_requests.count }})</h5>
-                                <div class="list-group mb-4">
-                                {% for sent_req in sent_requests %}
-                                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                                        <span>To: <a href="{% url 'profile_dashboard' username=sent_req.to_user.username %}">{{ sent_req.to_user.username }}</a></span>
-                                        <form method="post" action="{% url 'my_profile' %}">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="request_id" value="{{ sent_req.id }}">
-                                            <input type="hidden" name="next_url" value="{{ request.path }}">
-                                            <button type="submit" name="cancel_request" class="btn btn-sm btn-warning">Cancel</button>
-                                        </form>
-                                    </div>
-                                {% endfor %}
-                                </div>
-                            {% endif %}
-                            
+                    <!-- SEEN MOVIES POSTER GRID -->
+                    <div class="mt-2">
+                        <h3 class="mb-3 text-center">Your Seen Movies Library</h3>
+                        <div id="seen-movies-container" class="mb-3">{% include 'tracker/partials/seen_movies_grid.html' %}</div>
+                        <div class="d-flex justify-content-between align-items-center" id="seen-movies-pagination-controls">
+                            <button id="seen-prev-page" class="btn btn-sm btn-outline-secondary" disabled>Previous</button>
+                            <span>Page <span id="seen-current-page">1</span> of <span id="seen-total-pages"></span></span>
+                            <button id="seen-next-page" class="btn btn-sm btn-outline-secondary">Next</button>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- TWO-COLUMN LAYOUT: Friends/Details & Last Rated -->
+                    <div class="row mt-4">
+                        <!-- COLUMN 1: Friends & Invites -->
+                        <div class="col-lg-7">
+                            <h4 class="mb-3 border-bottom pb-2">Friends & Invites</h4>
                             <h5 class="mt-2">Friends ({{ friends_list.count }})</h5>
                             <div class="list-group mb-4">
                                 {% for friendship in friends_list %}
                                     <div class="list-group-item d-flex justify-content-between align-items-center">
                                         <div>
                                             <a href="{% url 'profile_dashboard' username=friendship.to_user.username %}" class="text-decoration-none fw-bold">{{ friendship.to_user.username }}</a>
+                                            <!-- *** RESTORED INVITE ICON *** -->
                                             {% if friendship.to_user.id in invited_friend_ids %}
                                                 <span class="ms-2" title="You invited this friend!">
                                                     <i class="bi bi-envelope-check-fill text-success"></i>
                                                 </span>
                                             {% endif %}
                                         </div>
-                                        <form method="post" action="{% url 'my_profile' %}" class="d-inline">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="remove_friend_id" value="{{ friendship.to_user.id }}">
-                                            <input type="hidden" name="next_url" value="{{ request.path }}">
-                                            <button type="submit" name="remove_friend" class="btn btn-sm btn-outline-danger">Remove</button>
-                                        </form>
+                                        <!-- *** UPDATED REMOVE BUTTON to btn-danger *** -->
+                                        <form method="post" action="{% url 'my_profile' %}" class="d-inline">{% csrf_token %}<input type="hidden" name="remove_friend_id" value="{{ friendship.to_user.id }}"><button type="submit" name="remove_friend" class="btn btn-sm btn-danger">Remove</button></form>
                                     </div>
                                 {% empty %}
                                     <p class="text-muted small p-2">You haven't added any friends yet.</p>
                                 {% endfor %}
                             </div>
+                            <h5 class="mt-4">Invite Links</h5>
+                            <div style="max-width: 400px;">
+                                {% for code in available_codes %}{% url 'signup_with_code' invite_code=code.code as signup_link %}<div class="input-group mb-2"><input type="text" class="form-control form-control-sm" value="{{ request.scheme }}://{{ request.get_host }}{{ signup_link }}" readonly id="invite-link-{{ code.id }}"><button class="btn btn-sm btn-outline-secondary" type="button" onclick="copyCode('invite-link-{{ code.id }}')">Copy</button></div>{% empty %}<p class="text-muted small">You have no available invite codes. Keep rating movies to earn more!</p>{% endfor %}
+                            </div>
                         </div>
 
-                        <div class="col-md-6">
-                            <h5 class="mt-2">Find Friends</h5>
-                            <form method="post" class="mb-4" action="{% url 'my_profile' %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="next_url" value="{{ request.path }}">
-                                <div class="input-group"><input type="text" name="query" class="form-control" placeholder="Search by username..."><button class="btn btn-outline-primary" type="submit" name="search_user">Search</button></div>
-                            </form>
-                            {% if search_results is not None %}
-                                <ul class="list-group mb-4">
-                                {% for user_data in search_results %}
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        <a href="{% url 'profile_dashboard' username=user_data.username %}">{{ user_data.username }}</a>
-                                        <form method="post" action="{% url 'profile_dashboard' username=user_data.username %}">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="user_id" value="{{ user_data.id }}">
-                                            <input type="hidden" name="next_url" value="{{ request.path }}">
-                                            <button type="submit" name="add_friend" class="btn btn-sm btn-info">Add</button>
-                                        </form>
-                                    </li>
-                                {% empty %}
-                                    <li class="list-group-item text-muted">No users found.</li>
-                                {% endfor %}
-                                </ul>
-                            {% endif %}
-
-                            <h5 class="mt-2">Invite Links</h5>
-                            {% for code in available_codes %}
-                                {% url 'signup_with_code' invite_code=code.code as signup_link %}
-                                <div class="input-group mb-2">
-                                    <input type="text" class="form-control" value="{{ request.scheme }}://{{ request.get_host }}{{ signup_link }}" readonly id="invite-link-{{ code.id }}">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="copyCode('invite-link-{{ code.id }}')">Copy Link</button>
-                                </div>
-                            {% empty %}
-                                <p class="text-muted small">You have no available invite codes. Keep rating movies to earn more!</p>
-                            {% endfor %}
+                        <!-- COLUMN 2: Last Rated Movies -->
+                        <div class="col-lg-5">
+                            <h4 class="mb-3 border-bottom pb-2">Recently Rated</h4>
+                            <div id="last-rated-container">{% include 'tracker/partials/last_rated_list.html' %}</div>
+                            <div class="d-flex justify-content-between mt-2" id="pagination-controls">
+                                <button id="prev-page" class="btn btn-sm btn-outline-secondary" disabled>Previous</button>
+                                <span>Page <span id="current-page">1</span> of <span id="total-pages"></span></span>
+                                <button id="next-page" class="btn btn-sm btn-outline-secondary">Next</button>
+                            </div>
                         </div>
+                    </div>
+
+                    <!-- FULL-WIDTH ACCOUNT DETAILS SECTION -->
+                    <hr class="my-4">
+                    <div class="mt-2">
+                         <h4 class="mb-3 border-bottom pb-2">Account Details</h4>
+                         <div class="row small text-muted">
+                             <div class="col-sm-6 mb-2"><strong>Email:</strong> {{ user.email }}</div>
+                             <div class="col-sm-6 mb-2"><strong>Date of Birth:</strong> {{ profile.date_of_birth|date:"F j, Y" }}</div>
+                             <div class="col-sm-6 mb-2"><strong>Joined:</strong> {{ profile.join_date|date:"F j, Y" }}</div>
+                             <div class="col-sm-6 mb-2"><strong>Last Activity:</strong> {{ profile.last_activity|timesince }} ago</div>
+                         </div>
                     </div>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
+
+{% if is_self %}
 <script>
-    function copyCode(elementId) {
+document.addEventListener('DOMContentLoaded', function() {
+    window.copyCode = function(elementId) {
         const input = document.getElementById(elementId);
         input.select();
         document.execCommand('copy');
     }
+
+    const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+    const totalSeenStat = document.getElementById('total-seen-movies-stat');
+    const lastRatedContainer = document.getElementById('last-rated-container');
+
+    // --- *** UPDATED HOVER LOGIC *** ---
+    lastRatedContainer.addEventListener('mouseover', (event) => {
+        if (event.target.classList.contains('rating-toggle')) {
+            const button = event.target;
+            const isSeen = button.dataset.currentStatus === 'true';
+            // Swap text
+            button.textContent = button.dataset.actionText;
+            // Swap colors
+            button.classList.toggle('btn-success', !isSeen);
+            button.classList.toggle('btn-warning', isSeen);
+        }
+    });
+
+    lastRatedContainer.addEventListener('mouseout', (event) => {
+        if (event.target.classList.contains('rating-toggle')) {
+            const button = event.target;
+            const isSeen = button.dataset.currentStatus === 'true';
+            // Revert text
+            button.textContent = button.dataset.statusText;
+            // Revert colors
+            button.classList.toggle('btn-success', isSeen);
+            button.classList.toggle('btn-warning', !isSeen);
+        }
+    });
+
+    // Click logic remains largely the same, just ensures correct final classes
+    lastRatedContainer.addEventListener('click', async function(event) {
+        if (event.target.classList.contains('rating-toggle')) {
+            const button = event.target;
+            // (The rest of the click logic is unchanged but is included here for completeness)
+            const viewId = button.dataset.viewId;
+            const newStatus = !(button.dataset.currentStatus === 'true');
+            try {
+                const response = await fetch('/api/update-rating/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+                    body: JSON.stringify({ view_id: viewId, new_status: newStatus })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const newStatusText = newStatus ? 'Seen' : 'Unseen';
+                    const newActionText = newStatus ? 'Mark as Unseen' : 'Mark as Seen';
+                    
+                    button.dataset.currentStatus = newStatus.toString();
+                    button.dataset.statusText = newStatusText;
+                    button.dataset.actionText = newActionText;
+                    button.textContent = newStatusText; 
+
+                    // Set final solid color state
+                    button.classList.remove('btn-warning', 'btn-success');
+                    button.classList.add(newStatus ? 'btn-success' : 'btn-warning');
+                    
+                    totalSeenStat.textContent = data.total_seen_movies;
+                    loadSeenPage(seenCurrentPage); 
+                }
+            } catch (error) { console.error('Error updating rating:', error); }
+        }
+    });
+    
+    // --- Full pagination script logic (unchanged) ---
+    const seenMoviesContainer = document.getElementById('seen-movies-container');
+    const seenPrevButton = document.getElementById('seen-prev-page');
+    // ... (rest of pagination script)
+    const seenNextButton = document.getElementById('seen-next-page');
+    const seenCurrentPageSpan = document.getElementById('seen-current-page');
+    const seenTotalPagesSpan = document.getElementById('seen-total-pages');
+    let seenCurrentPage = 1;
+    const seenTotalMovies = {{ total_seen_for_paging }};
+    const seenTotalPages = Math.ceil(seenTotalMovies / 12);
+    seenTotalPagesSpan.textContent = seenTotalPages;
+    updateSeenPaginationButtons();
+    function updateSeenPaginationButtons() {
+        seenPrevButton.disabled = seenCurrentPage === 1;
+        seenNextButton.disabled = seenCurrentPage === seenTotalPages || seenTotalPages === 0;
+    }
+    async function loadSeenPage(page) {
+        try {
+            const response = await fetch(`/api/seen-movies-page/${page}/`);
+            const data = await response.json();
+            seenMoviesContainer.innerHTML = data.html;
+            seenCurrentPage = page;
+            seenCurrentPageSpan.textContent = seenCurrentPage;
+            updateSeenPaginationButtons();
+        } catch (error) { console.error('Error fetching seen movies page:', error); }
+    }
+    seenPrevButton.addEventListener('click', () => { if (seenCurrentPage > 1) loadSeenPage(seenCurrentPage - 1); });
+    seenNextButton.addEventListener('click', () => { if (seenCurrentPage < seenTotalPages) loadSeenPage(seenCurrentPage + 1); });
+
+    const prevButton = document.getElementById('prev-page');
+    const nextButton = document.getElementById('next-page');
+    const currentPageSpan = document.getElementById('current-page');
+    const totalPagesSpan = document.getElementById('total-pages');
+    let currentPage = 1;
+    const totalMovies = {{ total_last_rated }};
+    const totalPages = Math.ceil(totalMovies / 10);
+    totalPagesSpan.textContent = totalPages;
+    updatePaginationButtons();
+    function updatePaginationButtons() {
+        prevButton.disabled = currentPage === 1;
+        nextButton.disabled = currentPage === totalPages || totalPages === 0;
+    }
+    async function loadPage(page) {
+        try {
+            const response = await fetch(`/api/last-rated-page/${page}/`);
+            const data = await response.json();
+            lastRatedContainer.innerHTML = data.html;
+            currentPage = page;
+            currentPageSpan.textContent = currentPage;
+            updatePaginationButtons();
+        } catch (error) { console.error('Error fetching page:', error); }
+    }
+    prevButton.addEventListener('click', () => { if (currentPage > 1) loadPage(currentPage - 1); });
+    nextButton.addEventListener('click', () => { if (currentPage < totalPages) loadPage(currentPage + 1); });
+});
 </script>
+{% endif %}
+
 {% endblock content %}

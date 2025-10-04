@@ -16,5 +16,11 @@ urlpatterns = [
     # This URL is for viewing a specific user's public profile
     path('profile/<str:username>/', views.profile_view, name='profile_dashboard'),
 
+    path('api/last-rated-page/<int:page>/', views.get_last_rated_page, name='get_last_rated_page'),
+    path('api/seen-movies-page/<int:page>/', views.get_seen_movies_page, name='get_seen_movies_page'),
+    path('api/update-rating/', views.update_rating, name='update_rating'),
+    path('movie/<int:movie_id>/', views.movie_detail_view, name='movie_detail'), # Placeholder
+
+
     path('about/', views.about_view, name='about'),
 ]

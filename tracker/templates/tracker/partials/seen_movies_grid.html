@@ -1,0 +1,19 @@
+<div class="row row-cols-3 row-cols-sm-4 row-cols-md-5 row-cols-lg-6 g-3">
+    {% for view in seen_movies_list %}
+    <div class="col">
+        <a href="{% url 'movie_detail' movie_id=view.movie.id %}" class="text-decoration-none poster-grid-item d-block">
+            {% if view.movie.poster_url %}
+                <img src="{{ view.movie.poster_url }}" alt="Poster for {{ view.movie.title }}" class="img-fluid poster-img shadow-sm">
+            {% else %}
+                <div class="bg-secondary text-white text-center rounded d-flex align-items-center justify-content-center poster-img shadow-sm">
+                    <small>{{ view.movie.title }}</small>
+                </div>
+            {% endif %}
+        </a>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <p class="text-center text-muted">You haven't marked any movies as "seen" yet.</p>
+    </div>
+    {% endfor %}
+</div>
