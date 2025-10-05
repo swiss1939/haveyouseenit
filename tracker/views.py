@@ -12,10 +12,10 @@ from django.db import transaction, IntegrityError
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.postgres.search import TrigramSimilarity
-from .models import Movie, UserMovieView, Profile, Genre, InviteCode, Friendship, MovieCastCredit, Actor, Director, Producer, Cinematographer
+from .models import Movie, UserMovieView, Profile, Genre, InviteCode, Friendship, MovieCastCredit
 from .forms import CustomUserCreationForm, ProfileUpdateForm
 from .signals import milestone_reached
-from django.http import JsonResponse, HttpResponseBadRequest, Http404
+from django.http import JsonResponse, HttpResponseBadRequest
 from django.template.loader import render_to_string
 from django.contrib.auth import login, logout
 from django.contrib import messages
@@ -175,16 +175,11 @@ def get_seen_movies_page(request, username, page):
 @login_required
 def movie_detail_view(request, movie_id):
     movie = get_object_or_404(Movie.objects.prefetch_related('directors', 'producers', 'cinematographers', 'genre'), id=movie_id)
-    crew = []
-    top_cast = MovieCastCredit.objects.filter(movie=movie).select_related('actor').order_by('order')[:10]
-    for d in movie.directors.all(): crew.append({'role': 'Director', 'name': d.name, 'id': d.id, 'role_slug': 'director'})
-    for p in movie.producers.all(): crew.append({'role': 'Producer', 'name': p.name, 'id': p.id, 'role_slug': 'producer'})
-    for c in movie.cinematographers.all(): crew.append({'role': 'Cinematography', 'name': c.name, 'id': c.id, 'role_slug': 'cinematographer'})
+    crew = []; top_cast = MovieCastCredit.objects.filter(movie=movie).select_related('actor').order_by('order')[:10]
+    for director in movie.directors.all(): crew.append({'role': 'Director', 'name': director.name})
+    for producer in movie.producers.all(): crew.append({'role': 'Producer', 'name': producer.name})
+    for cine in movie.cinematographers.all(): crew.append({'role': 'Cinematography', 'name': cine.name})
     context = {'movie': movie, 'crew': crew, 'cast': top_cast}
-
-    if request.GET.get('from') == 'profile':
-        context['show_back_link'] = True
-
     return render(request, 'tracker/movie_detail.html', context)
 
 @login_required
@@ -229,48 +224,6 @@ def update_account_details(request):
             return JsonResponse({'success': False, 'html': html})
     return HttpResponseBadRequest()
 # --- END NEW VIEWS ---
-
-# --- NEW VIEW FOR PERSON DETAILS ---
-@login_required
-def person_detail_view(request, person_id, role):
-    MODELS = {
-        'actor': Actor,
-        'director': Director,
-        'producer': Producer,
-        'cinematographer': Cinematographer,
-    }
-    FILTER_NAMES = {
-        'actor': 'actors',
-        'director': 'directors',
-        'producer': 'producers',
-        'cinematographer': 'cinematographers',
-    }
-    
-    model_class = MODELS.get(role)
-    if not model_class:
-        raise Http404("Invalid role specified.")
-        
-    person = get_object_or_404(model_class, id=person_id)
-    
-    filter_name = FILTER_NAMES.get(role)
-    movies = Movie.objects.filter(**{filter_name: person}).distinct().order_by('-release_year')
-
-    viewer_seen_movie_ids = set(UserMovieView.objects.filter(
-        user=request.user, has_seen=True
-    ).values_list('movie_id', flat=True))
-
-    context = {
-        'person': person,
-        'movies': movies,
-        'role': role.replace('_', ' '),
-        'viewer_seen_movie_ids': viewer_seen_movie_ids
-    }
-    
-    if request.GET.get('from') == 'profile':
-        context['show_back_link'] = True
-    
-    return render(request, 'tracker/person_detail.html', context)
-# --- END NEW VIEW ---
 
 def about_view(request):
     return render(request, 'tracker/about.html')
