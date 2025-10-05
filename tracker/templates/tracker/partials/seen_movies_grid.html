@@ -1,8 +1,7 @@
 <div class="row row-cols-3 row-cols-sm-4 row-cols-md-5 row-cols-lg-6 g-3">
     {% for view in seen_movies_list %}
     <div class="col">
-        <!-- *** UPDATED HREF to point to the new movie_detail URL *** -->
-        <a href="{% url 'movie_detail' movie_id=view.movie.id %}" class="text-decoration-none poster-grid-item d-block">
+        <a href="{% url 'movie_detail' movie_id=view.movie.id %}" class="text-decoration-none poster-grid-item d-block {% if viewer_seen_movie_ids and view.movie.id not in viewer_seen_movie_ids %}not-seen-by-viewer{% endif %}">
             {% if view.movie.poster_url %}
                 <img src="{{ view.movie.poster_url }}" alt="Poster for {{ view.movie.title }}" class="img-fluid poster-img shadow-sm">
             {% else %}

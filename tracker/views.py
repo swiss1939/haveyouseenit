@@ -136,9 +136,14 @@ def profile_view(request, username=None):
     if is_self or context['friendship_status'] == 'FRIENDS' or context['friendship_status'] == 'REQUEST_RECEIVED':
         context['total_rated_movies'] = UserMovieView.objects.filter(user=profile_owner).count()
     if is_self or context['friendship_status'] == 'FRIENDS':
-        seen_movies_query = UserMovieView.objects.filter(user=profile_owner, has_seen=True).select_related('movie').order_by('-date_recorded'); context['seen_movies_list'] = seen_movies_query[:12]; context['total_seen_for_paging'] = seen_movies_query.count()
+        seen_movies_query = UserMovieView.objects.filter(user=profile_owner, has_seen=True).select_related('movie').order_by('-date_recorded');
+        context['seen_movies_list'] = seen_movies_query[:12]; context['total_seen_for_paging'] = seen_movies_query.count()
+        # If viewing a friend's profile, get the current user's seen movies to compare
+        if not is_self:
+            context['viewer_seen_movie_ids'] = set(UserMovieView.objects.filter(user=current_user, has_seen=True).values_list('movie_id', flat=True))
     if is_self:
-        last_rated = UserMovieView.objects.filter(user=current_user).select_related('movie').order_by('-date_recorded'); context['last_rated_movies'] = last_rated[:10]; context['total_last_rated'] = min(last_rated.count(), 20)
+        last_rated = UserMovieView.objects.filter(user=current_user).select_related('movie').order_by('-date_recorded');
+        context['last_rated_movies'] = last_rated[:10]; context['total_last_rated'] = min(last_rated.count(), 20)
         invited_friend_ids = set(InviteCode.objects.filter(generated_by=current_user, used_by__isnull=False).values_list('used_by_id', flat=True))
         context.update({ 'available_codes': InviteCode.objects.filter(generated_by=current_user, used_by__isnull=True), 'friends_list': Friendship.objects.filter(from_user=current_user, status='ACCEPTED', to_user__is_active=True).select_related('to_user'), 'incoming_requests': Friendship.objects.filter(to_user=current_user, status='PENDING', from_user__is_active=True).select_related('from_user'), 'sent_requests': Friendship.objects.filter(from_user=current_user, status='PENDING', to_user__is_active=True).select_related('to_user'), 'invited_friend_ids': invited_friend_ids, })
     return render(request, 'tracker/profile_dashboard.html', context)
@@ -159,7 +164,12 @@ def get_seen_movies_page(request, username, page):
     is_friend = Friendship.objects.filter(from_user=request.user, to_user=user_to_fetch, status='ACCEPTED').exists()
     if not (is_self or is_friend): return JsonResponse({'error': 'Unauthorized'}, status=403)
     seen_movies = UserMovieView.objects.filter(user=user_to_fetch, has_seen=True).select_related('movie').order_by('-date_recorded')[start_index:end_index]
-    html = render_to_string('tracker/partials/seen_movies_grid.html', {'seen_movies_list': seen_movies})
+    
+    template_context = {'seen_movies_list': seen_movies}
+    if not is_self and is_friend:
+        template_context['viewer_seen_movie_ids'] = set(UserMovieView.objects.filter(user=request.user, has_seen=True).values_list('movie_id', flat=True))
+        
+    html = render_to_string('tracker/partials/seen_movies_grid.html', template_context)
     return JsonResponse({'html': html})
 
 @login_required

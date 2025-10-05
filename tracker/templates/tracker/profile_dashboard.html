@@ -3,7 +3,7 @@
 {% block content %}
 <style>
     .poster-grid-item {
-        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, opacity 0.2s ease-in-out;
     }
     .poster-grid-item:hover {
         transform: scale(1.05);
@@ -18,6 +18,12 @@
     }
     .rating-toggle {
         cursor: pointer;
+    }
+    .not-seen-by-viewer {
+        opacity: 0.4;
+    }
+    .not-seen-by-viewer:hover {
+        opacity: 1;
     }
 </style>
 
@@ -42,6 +48,7 @@
                 {% endif %}
                 
                 {% if is_self or friendship_status == 'FRIENDS' %}
+                
                     <hr class="my-4">
                     <div class="mt-2">
                         <h3 class="mb-3 text-center">{% if is_self %}Your{% else %}{{ profile_owner.first_name }} {{profile_owner.last_name }}'s{% endif %} Seen Movies Library</h3>
@@ -61,6 +68,7 @@
                             <h4 class="mb-3 border-bottom pb-2">Friends & Invites</h4>
                             {% if incoming_requests %}<h5 class="mt-2">Incoming Requests ({{ incoming_requests.count }})</h5><div class="list-group mb-4">{% for friend_req in incoming_requests %}<div class="list-group-item d-flex justify-content-between align-items-center"><a href="{% url 'profile_dashboard' username=friend_req.from_user.username %}" class="fw-bold text-decoration-none">{{ friend_req.from_user.username }}</a><form method="post" action="{% url 'my_profile' %}">{% csrf_token %}<input type="hidden" name="request_id" value="{{ friend_req.id }}"><input type="hidden" name="next_url" value="{{ request.path }}"><button type="submit" name="accept_request" class="btn btn-sm btn-success">Accept</button><button type="submit" name="decline_request" class="btn btn-sm btn-danger ms-1">Decline</button></form></div>{% endfor %}</div>{% endif %}
                             {% if sent_requests %}<h5 class="mt-2">Sent Requests ({{ sent_requests.count }})</h5><div class="list-group mb-4">{% for sent_req in sent_requests %}<div class="list-group-item d-flex justify-content-between align-items-center"><span>To: <a href="{% url 'profile_dashboard' username=sent_req.to_user.username %}">{{ sent_req.to_user.username }}</a></span><form method="post" action="{% url 'my_profile' %}">{% csrf_token %}<input type="hidden" name="request_id" value="{{ sent_req.id }}"><input type="hidden" name="next_url" value="{{ request.path }}"><button type="submit" name="cancel_request" class="btn btn-sm btn-warning">Cancel</button></form></div>{% endfor %}</div>{% endif %}
+                            
                             <h5 class="mt-2">Friends ({{ friends_list.count }})</h5>
                             <div class="list-group mb-4">
                                 {% for friendship in friends_list %}<div class="list-group-item d-flex justify-content-between align-items-center"><div><a href="{% url 'profile_dashboard' username=friendship.to_user.username %}" class="text-decoration-none fw-bold">{{ friendship.to_user.username }}</a>{% if friendship.to_user.id in invited_friend_ids %}<span class="ms-2" title="You invited this friend!"><i class="bi bi-envelope-check-fill text-success"></i></span>{% endif %}</div><form method="post" action="{% url 'my_profile' %}" class="d-inline">{% csrf_token %}<input type="hidden" name="remove_friend_id" value="{{ friendship.to_user.id }}"><button type="submit" name="remove_friend" class="btn btn-sm btn-danger">Remove</button></form></div>{% empty %}<p class="text-muted small p-2">You haven't added any friends yet.</p>{% endfor %}
@@ -93,6 +101,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     
+    
     // --- PART 1: "SEEN MOVIES" PAGINATION LOGIC (Unchanged and stable) ---
     const seenMoviesContainer = document.getElementById('seen-movies-container');
     if (seenMoviesContainer) {
@@ -105,7 +114,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const totalMovies = {{ total_seen_for_paging|default:0 }};
         const totalPages = Math.ceil(totalMovies / 12);
         if(seenTotalPagesSpan) seenTotalPagesSpan.textContent = totalPages;
-
         function updateButtons() {
             seenPrevButton.disabled = seenCurrentPage === 1;
             seenNextButton.disabled = seenCurrentPage === totalPages || totalPages === 0;
@@ -132,7 +140,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- PART 2: "MY PROFILE" ONLY LOGIC ---
     {% if is_self %}
         window.copyCode = function(elementId) {
-            const input = document.getElementById(elementId); input.select(); document.execCommand('copy');
+            const input = document.getElementById(elementId);
+            input.select(); document.execCommand('copy');
         }
 
         function getCookie(name) {
@@ -150,7 +159,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return cookieValue;
         }
         const csrfToken = getCookie('csrftoken');
-        
         // "Recently Rated" functionality (Unchanged and stable)
         const totalSeenStat = document.getElementById('total-seen-movies-stat');
         const lastRatedContainer = document.getElementById('last-rated-container');
@@ -174,7 +182,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     } catch (error) { console.error('Error updating rating:', error); }
                 }
             });
-            const prevButton = document.getElementById('prev-page'); const nextButton = document.getElementById('next-page'); const currentPageSpan = document.getElementById('current-page'); const totalPagesSpan = document.getElementById('total-pages'); let currentPage = 1; const totalMovies = {{ total_last_rated|default:0 }}; const totalPages = Math.ceil(totalMovies / 10); totalPagesSpan.textContent = totalPages;
+            const prevButton = document.getElementById('prev-page'); const nextButton = document.getElementById('next-page'); const currentPageSpan = document.getElementById('current-page'); const totalPagesSpan = document.getElementById('total-pages'); let currentPage = 1;
+            const totalMovies = {{ total_last_rated|default:0 }}; const totalPages = Math.ceil(totalMovies / 10); totalPagesSpan.textContent = totalPages;
             function updatePaginationButtons() { prevButton.disabled = currentPage === 1; nextButton.disabled = currentPage === totalPages || totalPages === 0; }
             async function loadPage(page) { try { const response = await fetch(`/api/last-rated-page/${page}/`); const data = await response.json(); lastRatedContainer.innerHTML = data.html; currentPage = page; currentPageSpan.textContent = currentPage; updatePaginationButtons(); } catch (error) { console.error('Error fetching page:', error); } }
             prevButton.addEventListener('click', () => { if (currentPage > 1) loadPage(currentPage - 1); });
