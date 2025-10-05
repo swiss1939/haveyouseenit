@@ -1,19 +1,26 @@
 <div class="row row-cols-3 row-cols-sm-4 row-cols-md-5 row-cols-lg-6 g-3">
-    {% for view in seen_movies_list %}
+    {% for item in movie_list %}
     <div class="col">
-        <a href="{% url 'movie_detail' movie_id=view.movie.id %}" class="text-decoration-none poster-grid-item d-block {% if viewer_seen_movie_ids and view.movie.id not in viewer_seen_movie_ids %}not-seen-by-viewer{% endif %}">
-            {% if view.movie.poster_url %}
-                <img src="{{ view.movie.poster_url }}" alt="Poster for {{ view.movie.title }}" class="img-fluid poster-img shadow-sm">
-            {% else %}
-                <div class="bg-secondary text-white text-center rounded d-flex align-items-center justify-content-center poster-img shadow-sm">
-                    <small>{{ view.movie.title }}</small>
-                </div>
-            {% endif %}
+        {% with movie=item.movie|default:item %}
+        <a href="{% url 'movie_detail' movie_id=movie.id %}{% if origin_page == 'profile' %}?from=profile{% endif %}" class="text-decoration-none poster-grid-item d-block {% if viewer_seen_movie_ids and movie.id not in viewer_seen_movie_ids %}not-seen-by-viewer{% endif %}">
+            <div class="poster-wrapper">
+                {% if movie.poster_url %}
+                    <img src="{{ movie.poster_url }}" alt="Poster for {{ movie.title }}" class="img-fluid poster-img shadow-sm">
+                {% else %}
+                    <div class="bg-secondary text-white text-center rounded d-flex align-items-center justify-content-center poster-img shadow-sm">
+                        <small>{{ movie.title }}</small>
+                    </div>
+                {% endif %}
+                {% if viewer_seen_movie_ids and movie.id not in viewer_seen_movie_ids %}
+                    <div class="not-seen-overlay">You Haven't Seen</div>
+                {% endif %}
+            </div>
         </a>
+        {% endwith %}
     </div>
     {% empty %}
     <div class="col-12">
-        <p class="text-center text-muted">You haven't marked any movies as "seen" yet.</p>
+        <p class="text-center text-muted">No movies to display.</p>
     </div>
     {% endfor %}
 </div>

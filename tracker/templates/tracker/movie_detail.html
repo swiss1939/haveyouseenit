@@ -6,8 +6,14 @@
     <div class="row justify-content-center">
         <div class="col-lg-10">
             <div class="card shadow-lg p-4 rounded-3">
+
+                {% if show_back_link %}
+                <div class="mb-3">
+                    <a href="{% url 'my_profile' %}" class="btn btn-outline-secondary btn-sm">&larr; Back to My Profile</a>
+                </div>
+                {% endif %}
+
                 <div class="row g-4">
-                    <!-- Poster Column (Unchanged) -->
                     <div class="col-md-4 text-center">
                         {% if movie.poster_url %}
                             <img src="{{ movie.poster_url }}" alt="Poster for {{ movie.title }}" class="img-fluid rounded shadow-sm">
@@ -18,7 +24,6 @@
                         {% endif %}
                     </div>
 
-                    <!-- Details Column (Unchanged) -->
                     <div class="col-md-8">
                         <h1 class="fw-bold text-primary">{{ movie.title }}</h1>
                         <h3 class="text-muted mb-3">({{ movie.release_year }})</h3>
@@ -33,7 +38,6 @@
                     </div>
                 </div>
 
-                <!-- UPDATED: Cast & Crew Section -->
                 <div class="row mt-4">
                     <div class="col-12">
                         <hr>
@@ -41,33 +45,29 @@
                         <div class="table-responsive">
                             <table class="table table-striped table-sm small">
                                 <tbody>
-                                    <!-- Loop 1: Render Crew -->
                                     {% for person in crew %}
-                                        <tr>
+                                    <tr>
                                             <td class="w-50"><strong>{{ person.role }}</strong></td>
-                                            <td>{{ person.name }}</td>
-                                        </tr>
+                                            <td><a href="{% url 'person_detail' person_id=person.id role=person.role_slug %}{% if show_back_link %}?from=profile{% endif %}" class="text-decoration-none text-dark fw-bold">{{ person.name }}</a></td>
+                                    </tr>
                                     {% endfor %}
 
-                                    <!-- Special Header Row for Cast -->
                                     {% if cast %}
                                     <tr>
                                         <td colspan="2" class="table-secondary"><strong>Cast</strong></td>
                                     </tr>
                                     {% endif %}
 
-                                    <!-- Loop 2: Render Cast -->
                                     {% for cast_member in cast %}
-                                        <tr>
-                                            <td></td> <!-- Empty cell on the left -->
-                                            <td>{{ cast_member.actor.name }}</td>
+                                    <tr>
+                                            <td></td> <td><a href="{% url 'person_detail' person_id=cast_member.actor.id role='actor' %}{% if show_back_link %}?from=profile{% endif %}" class="text-decoration-none text-dark fw-bold">{{ cast_member.actor.name }}</a></td>
                                         </tr>
                                     {% endfor %}
                                     
                                     {% if not crew and not cast %}
-                                        <tr>
+                                    <tr>
                                             <td colspan="2" class="text-muted text-center">Cast & Crew information is not available.</td>
-                                        </tr>
+                                    </tr>
                                     {% endif %}
                                 </tbody>
                             </table>

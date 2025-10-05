@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Reusing the same styles from the profile page for a consistent look */
+    .poster-grid-item {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+    .poster-grid-item:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        z-index: 10;
+    }
+    .poster-img {
+        width: 100%;
+        aspect-ratio: 2 / 3;
+        object-fit: cover;
+        border-radius: 8px;
+        transition: opacity 0.2s ease-in-out;
+    }
+    .poster-wrapper {
+        position: relative;
+        display: block;
+    }
+    .not-seen-by-viewer .poster-img {
+        opacity: 0.4;
+    }
+    .not-seen-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        font-weight: bold;
+        font-size: 1.1em;
+        padding: 10px;
+        box-sizing: border-box;
+        opacity: 1;
+        transition: opacity 0.2s ease-in-out;
+        border-radius: 8px;
+    }
+    .not-seen-by-viewer:hover .poster-img {
+        opacity: 1;
+    }
+    .not-seen-by-viewer:hover .not-seen-overlay {
+        opacity: 0;
+    }
+</style>
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-md-12">
+            <div class="card shadow-lg p-4 rounded-3">
+
+                {% if show_back_link %}
+                <div class="mb-3">
+                    <a href="{% url 'my_profile' %}" class="btn btn-outline-secondary btn-sm">&larr; Back to My Profile</a>
+                </div>
+                {% endif %}
+
+                <div class="text-center mb-4">
+                    <h2 class="card-title fw-bold text-primary">{{ person.name }}</h2>
+                    <h4 class="text-muted">Filmography as {{ role|capfirst }}</h4>
+                </div>
+
+                {% include 'tracker/partials/seen_movies_grid.html' with movie_list=movies viewer_seen_movie_ids=viewer_seen_movie_ids %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
